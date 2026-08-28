@@ -1,0 +1,3821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Unit Test Result Sheet Maker v1.0</title>
+
+    <!-- Dependencies via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Google Fonts: English & Bengali Support -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600;700&family=Noto+Serif+Bengali:wght@400;600;700&family=Roboto:wght@400;500;700&family=Tiro+Bangla&display=swap" rel="stylesheet">
+
+    <style>
+        /* CSS Variables & Modern Palette */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: rgba(79, 70, 229, 0.15);
+            --secondary: #0ea5e9;
+            --secondary-hover: #0284c7;
+            --bg-dark: #090d16;
+            --panel-bg: #131d31;
+            --panel-card: #1e293b;
+            --border-color: #334155;
+            --border-focus: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-red: #ef4444;
+            --accent-red-hover: #dc2626;
+            --accent-amber: #f59e0b;
+            --accent-amber-hover: #d97706;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+            --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --touch-target: 48px;
+            --header-height: 64px;
+            --nav-height: 52px;
+            --left-panel-width: 460px;
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-ui);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body.modal-open {
+            overflow: hidden !important;
+            touch-action: none;
+        }
+
+        /* App Shell Layout */
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            position: relative;
+        }
+
+        header {
+            background: rgba(19, 29, 49, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+            gap: 0.75rem;
+            flex-shrink: 0;
+            min-height: var(--header-height);
+            position: relative;
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-width: 0;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 800;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 10px rgba(79, 70, 229, 0.4);
+            flex-shrink: 0;
+        }
+
+        .brand-text-container {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .brand-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .brand-version {
+            font-size: 0.72rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .top-toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.25) transparent;
+            padding: 0.25rem 0.25rem;
+            min-width: 0;
+            flex: 1 1 auto;
+            justify-content: flex-start;
+        }
+
+        .top-toolbar::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .top-toolbar::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.35);
+            border-radius: 4px;
+        }
+
+        .top-toolbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .secret-trigger-zone {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 54px;
+            height: 54px;
+            z-index: 60;
+            cursor: default;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            background: transparent;
+            border: none;
+            outline: none;
+            box-shadow: none;
+            opacity: 0;
+        }
+
+        .secret-progress-ring {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            width: 38px;
+            height: 38px;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 61;
+        }
+
+        .secret-progress-ring.active {
+            opacity: 0.85;
+            transform: scale(1);
+        }
+
+        .secret-progress-ring svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .secret-progress-ring circle {
+            fill: none;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+        }
+
+        .secret-progress-ring .bg {
+            stroke: rgba(255, 255, 255, 0.15);
+        }
+
+        .secret-progress-ring .progress {
+            stroke: var(--secondary);
+            stroke-dasharray: 88;
+            stroke-dashoffset: 88;
+        }
+
+        .secret-progress-ring.animating .progress {
+            transition: stroke-dashoffset 3s linear;
+            stroke-dashoffset: 0;
+        }
+
+        .ui-hidden-override {
+            display: none !important;
+        }
+
+        .btn {
+            background: var(--panel-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            min-height: var(--touch-target);
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            outline: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn:hover {
+            background: #334155;
+            border-color: #475569;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+            background: #1e293b;
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--border-focus);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-primary { background: var(--primary); border-color: transparent; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        .btn-success { background: var(--accent-green); border-color: transparent; }
+        .btn-success:hover { background: var(--accent-green-hover); }
+
+        .btn-danger { background: var(--accent-red); border-color: transparent; }
+        .btn-danger:hover { background: var(--accent-red-hover); }
+
+        .btn-warning { background: var(--accent-amber); color: #000; border-color: transparent; }
+        .btn-warning:hover { background: var(--accent-amber-hover); color: #000; }
+
+        .btn-sm {
+            min-height: 38px;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        /* Lock / Logout Header Button Styling */
+        .btn-gist-lock {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border: 1px solid #6366f1;
+            color: #a5b4fc;
+            transition: all 0.2s ease;
+        }
+        .btn-gist-lock:hover {
+            background: linear-gradient(135deg, #312e81, #4338ca);
+            color: #ffffff;
+            border-color: #818cf8;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+        }
+        .btn-gist-lock.locked {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--accent-red);
+            color: #fca5a5;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .2s ease;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s ease;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 0.85rem;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+            gap: 0.75rem;
+        }
+
+        .settings-item-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .settings-section-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.15rem 0 0.5rem 0;
+            padding-bottom: 0.3rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .settings-section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        /* Workspace Wrapper */
+        .workspace-wrapper {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - var(--header-height));
+            height: calc(100dvh - var(--header-height));
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Left Control Panel */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            background: var(--panel-bg);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Right Preview Panel */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+            background: #050811;
+            position: relative;
+        }
+
+        /* Panel Resizer Divider Bar */
+        .panel-resizer {
+            width: 10px;
+            background: #1e293b;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+            cursor: col-resize;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+            z-index: 30;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .panel-resizer:hover, .panel-resizer.active {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .panel-resizer.locked {
+            cursor: not-allowed;
+            background: #151e2e;
+        }
+
+        .resizer-handle-line {
+            width: 2px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin-top: 12px;
+        }
+
+        .panel-resizer:hover .resizer-handle-line,
+        .panel-resizer.active .resizer-handle-line {
+            background: #ffffff;
+        }
+
+        .panel-resizer.locked .resizer-handle-line {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-lock-btn {
+            background: var(--panel-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.82rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, background 0.2s ease;
+            outline: none;
+            padding: 0;
+            z-index: 35;
+        }
+
+        .panel-lock-btn:hover {
+            transform: scale(1.12);
+            background: var(--primary);
+            border-color: transparent;
+        }
+
+        /* Horizontally Scrollable Tabs Navigation */
+        .tabs-nav-bar {
+            background: #0b1120;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.25) transparent;
+            flex-shrink: 0;
+            z-index: 40;
+            position: relative;
+            padding: 0 0.25rem;
+        }
+
+        .tabs-nav-bar::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .tabs-nav-bar::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 3px;
+        }
+
+        .tabs-nav-bar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tab-btn {
+            flex: 0 0 auto;
+            min-height: var(--nav-height);
+            padding: 0.6rem 0.95rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.86rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--secondary);
+            border-bottom-color: var(--secondary);
+            background: var(--panel-bg);
+        }
+
+        .tab-btn-preview {
+            background: rgba(14, 165, 233, 0.08);
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        .tab-btn-preview.active {
+            background: var(--panel-bg);
+            color: #38bdf8;
+            border-bottom-color: #38bdf8;
+        }
+
+        .main-workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            background: var(--panel-bg);
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 1.25rem 1rem;
+            padding-bottom: calc(2rem + var(--safe-area-bottom));
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .content-container {
+            max-width: 780px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .form-card {
+            background: var(--panel-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.15rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-card-title {
+            font-weight: 700;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: color 0.15s ease, opacity 0.15s ease;
+        }
+
+        .collapsible-header:hover {
+            opacity: 0.85;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .form-control {
+            width: 100%;
+            min-height: var(--touch-target);
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-inline-style {
+            display: flex;
+            gap: 0.4rem;
+            background: #0f172a;
+            padding: 0.3rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .style-btn {
+            flex: 1;
+            min-height: 40px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .style-btn:hover { background: #334155; color: white; }
+        .style-btn.active { background: var(--primary); color: white; }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-height: var(--touch-target);
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            accent-color: var(--secondary);
+            min-width: 0;
+            height: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            font-weight: 700;
+            min-width: 48px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .btn-slider {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+            box-shadow: var(--shadow-sm);
+            padding: 0;
+        }
+
+        .btn-slider:active {
+            transform: scale(0.92);
+        }
+
+        .btn-slider-dec { background-color: var(--accent-red); }
+        .btn-slider-dec:hover { background-color: var(--accent-red-hover); }
+
+        .btn-slider-inc { background-color: var(--accent-green); }
+        .btn-slider-inc:hover { background-color: var(--accent-green-hover); }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f172a;
+            padding: 0.75rem 0.9rem;
+            border-radius: 8px;
+            margin-bottom: 0.6rem;
+            border: 1px solid var(--border-color);
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .column-item span {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .roster-row-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-card);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            gap: 0.5rem;
+        }
+
+        .roster-row-item:hover {
+            border-color: var(--secondary);
+        }
+
+        #tab-preview.tab-content {
+            padding: 0;
+            display: none;
+            height: 100%;
+            background: #050811;
+        }
+
+        #tab-preview.tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-workspace {
+            flex: 1;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .preview-toolbar {
+            position: sticky;
+            top: 0.75rem;
+            background: rgba(19, 29, 49, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 0.5rem 0.85rem;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
+            z-index: 25;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .preview-scroll-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            padding-bottom: 2rem;
+        }
+
+        .a4-page {
+            background: white;
+            color: black;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+            margin-bottom: 2rem;
+            position: relative;
+            box-sizing: border-box;
+            line-height: 1.35;
+            font-variant-ligatures: normal;
+            text-rendering: optimizeLegibility;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .a4-page.portrait {
+            width: 210mm;
+            height: 297mm;
+            min-height: 297mm;
+            max-height: 297mm;
+        }
+
+        .a4-page.landscape {
+            width: 297mm;
+            height: 210mm;
+            min-height: 210mm;
+            max-height: 210mm;
+        }
+
+        .sheet-header {
+            width: 100%;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .sheet-year-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        .sheet-title {
+            text-align: center;
+            text-transform: uppercase;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+
+        .sheet-address {
+            text-align: center;
+            margin-top: 3px;
+            word-break: break-word;
+            line-height: 1.25;
+        }
+
+        .sheet-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding: 0 4px;
+            line-height: 1.25;
+        }
+
+        .sheet-separator {
+            border: none;
+            background-color: black;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .sheet-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            table-layout: fixed;
+        }
+
+        .sheet-table th, 
+        .sheet-table td {
+            border: 1px solid #000;
+            text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            font-variant-ligatures: normal;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+
+        .sheet-table th {
+            background-color: #f2f2f2;
+        }
+
+        .sheet-table th.col-name,
+        .sheet-table td.col-name {
+            text-align: left;
+            padding-left: 6px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            padding: 0.75rem;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 540px;
+            max-height: 90vh;
+            max-height: 90dvh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px) scale(0.96);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            margin: auto;
+        }
+
+        .modal-card-lg {
+            max-width: 760px;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            background: #0b1120;
+            padding: 0.9rem 1.15rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .modal-body {
+            padding: 1.15rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
+        }
+
+        .modal-footer {
+            background: #0b1120;
+            padding: 0.85rem 1.15rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--secondary);
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .student-display-card {
+            background: #0b1120;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.9rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .student-roll-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            margin-bottom: 0.4rem;
+        }
+
+        #modal-pick-btn:focus, #modal-pick-btn:focus-visible,
+        #modal-next-btn:focus, #modal-next-btn:focus-visible,
+        #modal-search-filter:focus, #modal-search-filter:focus-visible,
+        #modal-marks-input:focus, #modal-marks-input:focus-visible {
+            outline: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.4) !important;
+        }
+
+        .storage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .storage-table th, .storage-table td {
+            padding: 0.65rem 0.6rem;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .storage-table th {
+            background: #0b1120;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .storage-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            left: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 300;
+            pointer-events: none;
+            max-width: 420px;
+            margin-left: auto;
+        }
+
+        .toast {
+            background: #1e293b;
+            color: white;
+            padding: 0.85rem 1.15rem;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary);
+            box-shadow: var(--shadow-lg);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            pointer-events: auto;
+            animation: slideInMobile 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .toast.success { border-left-color: var(--accent-green); }
+        .toast.error { border-left-color: var(--accent-red); }
+        .toast.warning { border-left-color: var(--accent-amber); }
+        .toast.info { border-left-color: var(--secondary); }
+
+        @keyframes slideInMobile {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+
+        .rules-table th, .rules-table td {
+            padding: 0.45rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .rules-table input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 36px;
+        }
+
+        .btn-view-toggle {
+            background: #1e293b;
+            border-color: var(--secondary);
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+        .btn-view-toggle:hover {
+            background: rgba(14, 165, 233, 0.15);
+            border-color: var(--border-focus);
+        }
+
+        /* Desktop & Mobile View Mode Overrides */
+        body.mode-desktop .app-shell {
+            max-width: 100% !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        body.mode-desktop header {
+            flex-direction: row !important;
+            align-items: center !important;
+            padding: 0.5rem 1.25rem !important;
+            gap: 1rem !important;
+            justify-content: space-between !important;
+        }
+
+        body.mode-desktop .brand {
+            justify-content: flex-start !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.mode-desktop .top-toolbar {
+            justify-content: flex-start !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            padding-bottom: 0.25rem !important;
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+
+        body.mode-desktop .left-panel {
+            width: var(--left-panel-width, 460px) !important;
+            min-width: 300px;
+            max-width: 75vw;
+            display: flex !important;
+            height: 100% !important;
+        }
+
+        body.mode-desktop .panel-resizer {
+            display: flex !important;
+        }
+
+        body.mode-desktop .right-panel {
+            display: flex !important;
+            flex: 1 !important;
+        }
+
+        body.mode-desktop .tabs-nav-bar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            justify-content: flex-start !important;
+            padding: 0 0.5rem !important;
+            flex-shrink: 0 !important;
+            background: #0b1120 !important;
+        }
+
+        body.mode-desktop .tab-btn {
+            display: inline-flex !important;
+            flex: 0 0 auto !important;
+            padding: 0.6rem 0.95rem !important;
+            font-size: 0.85rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        body.mode-desktop #tab-btn-preview {
+            display: none !important;
+        }
+
+        body.mode-desktop .content-container {
+            max-width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1.25rem !important;
+        }
+
+        body.mode-desktop .modal-card {
+            max-height: 90vh !important;
+            border-radius: 14px !important;
+        }
+
+        body.mode-desktop .modal-footer {
+            display: flex !important;
+            justify-content: flex-end !important;
+            gap: 0.5rem !important;
+        }
+
+        body.mode-desktop .modal-footer .btn {
+            width: auto !important;
+        }
+
+        body.mode-mobile .app-shell {
+            max-width: 480px !important;
+            margin: 0 auto !important;
+            border-left: 1px solid var(--border-color) !important;
+            border-right: 1px solid var(--border-color) !important;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8) !important;
+        }
+
+        body.mode-mobile header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 0.65rem 0.85rem !important;
+            gap: 0.5rem !important;
+        }
+
+        body.mode-mobile .brand {
+            justify-content: flex-start !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.mode-mobile .top-toolbar {
+            justify-content: flex-start !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            padding-bottom: 0.2rem !important;
+            flex-wrap: nowrap !important;
+            -webkit-overflow-scrolling: touch !important;
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+
+        body.mode-mobile .workspace-wrapper {
+            flex-direction: column !important;
+        }
+
+        body.mode-mobile .panel-resizer {
+            display: none !important;
+        }
+
+        body.mode-mobile .left-panel {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.mode-mobile .left-panel.preview-active-mobile {
+            height: auto !important;
+            min-height: auto !important;
+            flex: 0 0 auto !important;
+        }
+
+        body.mode-mobile .left-panel.preview-active-mobile #main-workspace {
+            display: none !important;
+        }
+
+        body.mode-mobile .left-panel.hidden-mobile {
+            display: none !important;
+        }
+
+        body.mode-mobile .right-panel {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            min-height: 0 !important;
+        }
+
+        body.mode-mobile .right-panel.hidden-mobile {
+            display: none !important;
+        }
+
+        body.mode-mobile .tabs-nav-bar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            justify-content: flex-start !important;
+            padding: 0 0.25rem !important;
+            width: 100% !important;
+        }
+
+        body.mode-mobile .tab-btn {
+            flex: 0 0 auto !important;
+            padding: 0.6rem 0.85rem !important;
+            font-size: 0.82rem !important;
+        }
+
+        body.mode-mobile .content-container {
+            max-width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        body.mode-mobile .modal-card {
+            max-height: 94vh !important;
+            max-height: 94dvh !important;
+            border-radius: 12px !important;
+        }
+
+        body.mode-mobile .modal-footer {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.45rem !important;
+        }
+
+        body.mode-mobile .modal-footer .btn {
+            width: 100% !important;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                overflow: visible !important;
+            }
+            header, nav, .tabs-nav-bar, .panel-resizer, .left-panel, .preview-toolbar, .modal-overlay, .toast-container, #secret-settings-trigger, #secret-progress-ring {
+                display: none !important;
+            }
+            .app-shell, .workspace-wrapper, .right-panel, .preview-workspace, .preview-scroll-wrapper {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                background: transparent !important;
+            }
+            #a4-pages-container {
+                transform: none !important;
+            }
+            .a4-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                page-break-after: always;
+                break-after: page;
+            }
+            .a4-page:last-child {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <header>
+            <!-- Invisible Secret Settings Trigger Zone -->
+            <div id="secret-settings-trigger" class="secret-trigger-zone" aria-hidden="true"></div>
+            <div id="secret-progress-ring" class="secret-progress-ring">
+                <svg viewBox="0 0 32 32">
+                    <circle class="bg" cx="16" cy="16" r="14"></circle>
+                    <circle class="progress" cx="16" cy="16" r="14"></circle>
+                </svg>
+            </div>
+
+            <div class="brand">
+                <div class="brand-logo">UT</div>
+                <div class="brand-text-container">
+                    <div class="brand-title">Unit Test Result Sheet Maker</div>
+                    <span class="brand-version">v1.0 • Gist Sync & Encrypted Token Security</span>
+                </div>
+            </div>
+
+            <!-- Horizontally Scrollable Header Toolbar -->
+            <div class="top-toolbar" id="top-toolbar">
+                <button id="btn-toggle-view-mode" class="btn btn-sm btn-view-toggle" onclick="app.toggleViewMode()" title="Toggle Desktop / Mobile Layout State">
+                    <span id="view-mode-icon">🖥️</span> <span id="view-mode-text">Desktop View</span>
+                </button>
+
+                <button id="btn-ctrl-new-sheet" class="btn btn-warning" onclick="app.newSheet()"><span>📄</span> New Sheet</button>
+                <button id="btn-ctrl-upload-excel" class="btn" onclick="document.getElementById('excel-file-input').click()"><span>📊</span> Upload Excel</button>
+                <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none;" onchange="app.handleExcelUpload(event)">
+                
+                <button id="btn-ctrl-sample" class="btn btn-sm" onclick="app.downloadSampleExcel()">📥 Sample</button>
+                
+                <button id="btn-ctrl-import-json" class="btn" onclick="document.getElementById('json-file-input').click()">📂 Import JSON</button>
+                <input type="file" id="json-file-input" accept=".json" style="display:none;" onchange="app.importJSON(event)">
+                
+                <button id="btn-ctrl-export-json" class="btn" onclick="app.exportJSON()">💾 Export JSON</button>
+                
+                <!-- Gist Remote Cloud Sync Buttons -->
+                <button id="btn-gist-upload" class="btn btn-success" onclick="gistSync.openUploadModal()">☁️ Save to Gist</button>
+                <button id="btn-gist-browser" class="btn" onclick="gistSync.openGistBrowserModal()">🔍 Gist Files & Sync</button>
+
+                <button id="btn-ctrl-storage" class="btn" onclick="app.openStorageManager()"><span>🗄️</span> Local Storage</button>
+                <button id="btn-ctrl-export-pdf" class="btn btn-primary" onclick="app.exportPDF()"><span>🖨️</span> Export PDF</button>
+
+                <!-- Animated Security Lock / Logout Button -->
+                <button id="btn-gist-security-lock" class="btn btn-sm btn-gist-lock" onclick="gistAuth.toggleLockState()" title="Lock / Unlock GitHub Gist Security Token">
+                    <span id="gist-lock-icon">🔒</span> <span id="gist-lock-text">Lock Session</span>
+                </button>
+                
+                <button id="btn-settings-trigger" class="btn btn-sm" style="display:none; background:#1e293b; border-color:var(--secondary); color:var(--secondary);" onclick="app.openSettingsModal()" title="UI Control & Visibility Settings">
+                    <span>⚙️</span> Settings
+                </button>
+            </div>
+        </header>
+
+        <div class="workspace-wrapper" id="workspace-wrapper">
+            <!-- Left Control Panel -->
+            <div class="left-panel" id="left-panel">
+                <nav class="tabs-nav-bar" id="app-tabs-navbar">
+                    <button id="tab-btn-heading" class="tab-btn" onclick="app.switchTab('tab-heading', this)">📝 Heading</button>
+                    <button id="tab-btn-table-style" class="tab-btn" onclick="app.switchTab('tab-table-style', this)">📐 Table Style</button>
+                    <button id="tab-btn-page" class="tab-btn" onclick="app.switchTab('tab-page', this)">📄 Page & Layout</button>
+                    <button id="tab-btn-marks" class="tab-btn active" onclick="app.switchTab('tab-marks', this)">👥 Marks & Cols</button>
+                    <button id="tab-btn-grades" class="tab-btn" onclick="app.switchTab('tab-grades', this)">🎯 Grading</button>
+                    <button id="tab-btn-preview" class="tab-btn tab-btn-preview" onclick="app.switchTab('tab-preview', this)">👁️ A4 Preview</button>
+                </nav>
+
+                <main class="main-workspace" id="main-workspace">
+                    <!-- Tab 1: Heading Content -->
+                    <section id="tab-heading" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">🏫 School & Examination Details</div>
+                                <div class="form-group">
+                                    <label>School Name (Row 1)</label>
+                                    <input type="text" id="cfg-school-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Short Address / Subtitle (Row 2)</label>
+                                    <input type="text" id="cfg-school-address" class="form-control" oninput="app.updateHeadingFromInput()">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Class</label>
+                                        <input type="text" id="cfg-class-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Subject</label>
+                                        <input type="text" id="cfg-subject-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Section</label>
+                                        <input type="text" id="cfg-section-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Top Right Year</label>
+                                        <input type="text" id="cfg-year" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">✍️ Unified Heading Typography</div>
+                                <div class="form-group">
+                                    <label>Font Family (Bengali / English)</label>
+                                    <select id="cfg-font-family" class="form-control" onchange="app.updateTypographyFromInput()">
+                                        <option value="'Hind Siliguri', sans-serif">Hind Siliguri (Bengali / English)</option>
+                                        <option value="'Noto Sans Bengali', sans-serif">Noto Sans Bengali</option>
+                                        <option value="'Noto Serif Bengali', serif">Noto Serif Bengali</option>
+                                        <option value="'Tiro Bangla', serif">Tiro Bangla</option>
+                                        <option value="'Inter', sans-serif">Inter (Modern English)</option>
+                                        <option value="'Roboto', sans-serif">Roboto</option>
+                                        <option value="Arial, sans-serif">Arial</option>
+                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Heading Base Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-heading-font-size', -1)">—</button>
+                                        <input type="range" id="cfg-heading-font-size" min="12" max="28" value="18" oninput="app.updateTypographyFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-heading-font-size', 1)">+</button>
+                                        <span id="cfg-heading-font-size-val" class="slider-value">18px</span>
+                                    </div>
+                                    <span style="font-size: 0.74rem; color: var(--text-muted); display:block; margin-top:0.3rem;">Adjusts School Name, Address, Class, Subject, Section & Year together proportionally.</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Heading Text Styling</label>
+                                    <div class="form-inline-style">
+                                        <button id="btn-fmt-bold" class="style-btn" onclick="app.toggleFormat('headingBold')">B</button>
+                                        <button id="btn-fmt-italic" class="style-btn" style="font-style:italic;" onclick="app.toggleFormat('headingItalic')">I</button>
+                                        <button id="btn-fmt-underline" class="style-btn" style="text-decoration:underline;" onclick="app.toggleFormat('headingUnderline')">U</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 2: Table Styling -->
+                    <section id="tab-table-style" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">📏 Row Height & Sizing</div>
+                                <div class="form-group">
+                                    <label>Table Row Height</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-row-height', -1)">—</button>
+                                        <input type="range" id="cfg-row-height" min="18" max="55" value="26" oninput="app.updateRowHeightFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-row-height', 1)">+</button>
+                                        <span id="cfg-row-height-val" class="slider-value">26px</span>
+                                    </div>
+                                    <span style="font-size: 0.74rem; color: var(--text-muted); display:block; margin-top:0.3rem;">Adjusts row height dynamically. Pagination automatically recalculates so every A4 page is perfectly balanced.</span>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">🎨 Absentee Row Highlighting ('-')</div>
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                                    <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-highlight-absent">Enable Row Highlighting</label>
+                                    <input type="checkbox" id="cfg-highlight-absent" style="width:22px; height:22px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleAbsentHighlight(this.checked)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Check Absent in Column(s):</label>
+                                    <div id="cfg-absent-cols-container" style="max-height: 140px; overflow-y: auto; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.45rem;"></div>
+                                </div>
+
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                                    <span style="font-size:0.82rem; color:var(--text-muted); font-weight:600;">Highlight Color:</span>
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <input type="color" id="cfg-absent-highlight-color" value="#fee2e2" style="border:none; width:36px; height:34px; border-radius:6px; cursor:pointer; background:transparent;" onchange="app.updateAbsentHighlightColor(this.value)">
+                                        <input type="text" id="cfg-absent-highlight-color-hex" class="form-control" style="width:100px; font-size:0.82rem; padding:0.25rem 0.5rem; text-align:center; min-height:36px;" value="#fee2e2" onchange="app.updateAbsentHighlightColor(this.value)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">🔤 Table Header & Cell Typography</div>
+                                <div class="form-group">
+                                    <label>Table Header Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-th-font-size', -1)">—</button>
+                                        <input type="range" id="cfg-th-font-size" min="9" max="20" value="13" oninput="app.updateTypographyFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-th-font-size', 1)">+</button>
+                                        <span id="cfg-th-font-size-val" class="slider-value">13px</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Table Header Style</label>
+                                    <div class="form-inline-style">
+                                        <button id="btn-th-bold" class="style-btn" onclick="app.toggleFormat('thBold')">B (Bold)</button>
+                                        <button id="btn-th-italic" class="style-btn" style="font-style:italic;" onclick="app.toggleFormat('thItalic')">I (Italic)</button>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Student Table Cell Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-td-font-size', -1)">—</button>
+                                        <input type="range" id="cfg-td-font-size" min="8" max="18" value="12" oninput="app.updateTypographyFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-td-font-size', 1)">+</button>
+                                        <span id="cfg-td-font-size-val" class="slider-value">12px</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">📊 Individual Column Widths (%)</div>
+                                <div id="col-widths-controls-container"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 3: Page & Separator Settings -->
+                    <section id="tab-page" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">📄 Page Orientation & Numbering</div>
+                                <div class="form-group">
+                                    <label>Page Orientation</label>
+                                    <select id="cfg-orientation" class="form-control" onchange="app.updatePageFromInput()">
+                                        <option value="portrait">Portrait (Vertical A4)</option>
+                                        <option value="landscape">Landscape (Horizontal A4)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Page Number Position</label>
+                                    <select id="cfg-page-number-pos" class="form-control" onchange="app.updatePageFromInput()">
+                                        <option value="bottom-right">Bottom Right</option>
+                                        <option value="bottom-center">Bottom Center</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                        <option value="top-right">Top Right</option>
+                                        <option value="top-center">Top Center</option>
+                                        <option value="top-left">Top Left</option>
+                                        <option value="none">Hide Page Number</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Page Number Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-page-number-size', -1)">—</button>
+                                        <input type="range" id="cfg-page-number-size" min="8" max="22" value="10" oninput="app.updatePageFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-page-number-size', 1)">+</button>
+                                        <span id="cfg-page-number-size-val" class="slider-value">10px</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Page Number Style</label>
+                                    <div class="form-inline-style">
+                                        <button id="btn-page-num-bold" class="style-btn" onclick="app.toggleFormat('pageNumberBold')">B (Bold)</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">📐 Page Margins (mm)</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Top</label>
+                                        <input type="number" id="cfg-margin-top" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Bottom</label>
+                                        <input type="number" id="cfg-margin-bottom" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Left</label>
+                                        <input type="number" id="cfg-margin-left" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Right</label>
+                                        <input type="number" id="cfg-margin-right" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">➖ Header Separator Line</div>
+                                <div class="form-group">
+                                    <label>Line Width (%)</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-sep-width', -1)">—</button>
+                                        <input type="range" id="cfg-sep-width" min="20" max="100" value="100" oninput="app.updateSeparatorFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-sep-width', 1)">+</button>
+                                        <span id="cfg-sep-width-val" class="slider-value">100%</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Line Thickness (px)</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-sep-thickness', -1)">—</button>
+                                        <input type="range" id="cfg-sep-thickness" min="1" max="5" value="1" oninput="app.updateSeparatorFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-sep-thickness', 1)">+</button>
+                                        <span id="cfg-sep-thickness-val" class="slider-value">1px</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Spacing Above (px)</label>
+                                        <input type="number" id="cfg-sep-sp-top" class="form-control" min="0" max="30" oninput="app.updateSeparatorFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Spacing Below (px)</label>
+                                        <input type="number" id="cfg-sep-sp-bot" class="form-control" min="0" max="30" oninput="app.updateSeparatorFromInput()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 4: Dynamic Columns & Student Records -->
+                    <section id="tab-marks" class="tab-content active">
+                        <div class="content-container">
+                            <div class="form-card" id="card-mandatory-column-labels">
+                                <div class="form-card-title collapsible-header" id="heading-mandatory-col-labels" onclick="app.toggleMandatoryLabelsCollapse()" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0;" title="Click to unfold / fold Mandatory Column Labels">
+                                    <span>🏷️ Mandatory Column Labels</span>
+                                    <span id="mandatory-labels-chevron" style="font-size: 0.8rem; color: var(--secondary); transition: transform 0.2s ease;">▶</span>
+                                </div>
+                                
+                                <div id="mandatory-labels-body" style="display: none; margin-top: 1rem;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Roll No Heading</label>
+                                            <input type="text" id="cfg-lbl-roll" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Name Heading</label>
+                                            <input type="text" id="cfg-lbl-name" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>No of D Heading</label>
+                                            <input type="text" id="cfg-lbl-noof-d" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Total Heading</label>
+                                            <input type="text" id="cfg-lbl-total" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Grade Heading</label>
+                                            <input type="text" id="cfg-lbl-grade" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <div class="form-card-title" style="margin-bottom:0;">📋 Test / Marks Columns</div>
+                                    <button id="btn-ctrl-add-col" class="btn btn-sm btn-primary" onclick="app.addColumn()">+ Add Column</button>
+                                </div>
+
+                                <div id="columns-list-container"></div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">➕ Add Single Student</div>
+                                <div class="form-row">
+                                    <div class="form-group" style="flex: 0.9;">
+                                        <input type="text" id="new-student-roll" class="form-control" placeholder="Roll No (Unique)" onkeydown="if(event.key==='Enter') app.addNewStudent()">
+                                    </div>
+                                    <div class="form-group" style="flex: 1.4;">
+                                        <input type="text" id="new-student-name" class="form-control" placeholder="Student Full Name" onkeydown="if(event.key==='Enter') app.addNewStudent()">
+                                    </div>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <span style="font-size:0.75rem; color:var(--text-muted);">Students automatically arrange in ascending Roll order.</span>
+                                    <button id="btn-ctrl-add-student" class="btn btn-success" onclick="app.addNewStudent()">+ Add Student</button>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <div class="form-card-title" style="margin-bottom:0;">👥 Student Roster (<span id="student-count-badge">0</span>)</div>
+                                    <input type="text" id="roster-search-input" class="form-control" style="width:160px; min-height:36px; font-size:0.82rem; padding:0.25rem 0.5rem;" placeholder="🔍 Filter list..." oninput="app.renderRosterManagerList(this.value)">
+                                </div>
+                                <div id="roster-manager-list" style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; background: #0b1120;"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 5: Grading System Settings -->
+                    <section id="tab-grades" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">⚙️ Grading Options</div>
+                                
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:#0b1120; padding:0.75rem 0.9rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:0.75rem;">
+                                    <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-show-unit-grades">Show Grade for Each Unit Mark</label>
+                                    <input type="checkbox" id="cfg-show-unit-grades" style="width:20px; height:20px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleUnitGrades(this.checked)">
+                                </div>
+
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:#0b1120; padding:0.75rem 0.9rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:0.75rem;">
+                                    <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-show-noof-d">Show "No of D" Column</label>
+                                    <input type="checkbox" id="cfg-show-noof-d" style="width:20px; height:20px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleNoOfD(this.checked)">
+                                </div>
+
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:#0b1120; padding:0.75rem 0.9rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:0.75rem;">
+                                    <div>
+                                        <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-treat-hyphen-d">Treat '-' as Grade "D"</label>
+                                        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">Includes absent/hyphen marks in Grade "D" count</div>
+                                    </div>
+                                    <input type="checkbox" id="cfg-treat-hyphen-d" style="width:20px; height:20px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleTreatHyphenAsD(this.checked)">
+                                </div>
+
+                                <div class="form-group" style="margin-top:1rem;">
+                                    <label>Calculate Overall Grade Based On</label>
+                                    <select id="cfg-grade-source" class="form-control" onchange="app.updateGradeSourceFromInput()">
+                                        <option value="total">Total Marks</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">📊 Gradation Scale Editor</div>
+                                
+                                <div style="background:#0b1120; padding:0.65rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:1rem;">
+                                    <div class="form-inline-style">
+                                        <button type="button" id="btn-grade-cat-total" class="style-btn active" style="font-size:0.85rem;" onclick="app.switchGradeRuleCategory('total')">📊 Total Marks Rules</button>
+                                        <button type="button" id="btn-grade-cat-unit" class="style-btn" style="font-size:0.85rem;" onclick="app.switchGradeRuleCategory('unit')">📝 Unit Marks Rules</button>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                                    <label id="grade-rules-header-title" style="font-weight:700; color:white; font-size:0.9rem;">Total Marks Grading Rules</label>
+                                    <button id="btn-ctrl-add-grade" class="btn btn-sm btn-primary" onclick="app.addGradeRule()">+ Add Grade</button>
+                                </div>
+
+                                <div id="grade-validation-alert" style="display:none; background: rgba(239,68,68,0.2); border: 1px solid var(--accent-red); padding: 0.6rem; border-radius: 8px; font-size: 0.8rem; color: #fca5a5; margin-bottom: 0.75rem;">
+                                    ⚠️ Grade range overlap or invalid min/max numbers detected!
+                                </div>
+
+                                <div style="overflow-x:auto;">
+                                    <table class="rules-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="color:var(--text-muted); font-size:0.78rem;">Grade</th>
+                                                <th style="color:var(--text-muted); font-size:0.78rem;">Min</th>
+                                                <th style="color:var(--text-muted); font-size:0.78rem;">Max</th>
+                                                <th style="width:40px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="grade-rules-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+
+            <!-- Resizable Panel Divider Bar -->
+            <div class="panel-resizer" id="panel-resizer" title="Drag border to resize panel width">
+                <button id="panel-lock-btn" class="panel-lock-btn" onclick="app.togglePanelLock()" title="Toggle Panel Resizing Lock State">
+                    <span id="lock-icon">🔓</span>
+                </button>
+                <div class="resizer-handle-line"></div>
+            </div>
+
+            <!-- Right Preview Panel -->
+            <div class="right-panel" id="right-panel">
+                <section id="tab-preview" class="tab-content active">
+                    <div class="preview-workspace">
+                        <div id="ctrl-preview-zoom-bar" class="preview-toolbar">
+                            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">A4 Preview Zoom:</span>
+                            <button class="btn btn-sm" onclick="app.adjustZoom(-0.1)">−</button>
+                            <span id="zoom-value" style="font-size: 0.9rem; font-weight: 800; width: 50px; text-align: center; color:var(--secondary);">40%</span>
+                            <button class="btn btn-sm" onclick="app.adjustZoom(0.1)">+</button>
+                            <button class="btn btn-sm" onclick="app.resetZoom()">Fit / Reset</button>
+                        </div>
+
+                        <div class="preview-scroll-wrapper">
+                            <div id="a4-pages-container" style="transform-origin: top center; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Mark Entry Modal -->
+    <div id="mark-entry-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-col-title">Unit - I Marks Entry</div>
+                <div style="font-size:0.82rem; color:var(--text-muted); font-weight:600;" id="modal-progress-text">Student 1 of 5</div>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 0.85rem; background: #0b1120; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem; flex-wrap:wrap; gap:0.4rem;">
+                        <label style="font-size:0.75rem; color:var(--secondary); font-weight:700; text-transform:uppercase; margin-bottom:0;">⚡ Quick Search & Jump</label>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:0.35rem; cursor:pointer; user-select:none; margin:0;" title="Toggle automatic keyboard focus cycling">
+                            <input type="checkbox" id="modal-focus-cycle-toggle" tabindex="-1" style="accent-color:var(--secondary); width:16px; height:16px; cursor:pointer;" onchange="app.toggleFocusCycle(this.checked)" checked>
+                            <span style="font-weight:600; color:var(--text-main);">Auto Focus Cycle</span>
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:0.4rem; align-items:center;">
+                        <input type="text" id="modal-search-filter" tabindex="0" class="form-control" style="font-size:0.88rem; padding:0.45rem 0.65rem; flex:1; min-height:42px;" placeholder="🔍 Roll or Name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" oninput="app.filterModalStudentList(this.value)" onkeydown="app.handleSearchKeyDown(event)">
+                        <select id="modal-student-select" tabindex="-1" class="form-control" style="font-size:0.85rem; padding:0.45rem 0.65rem; flex:1.2; cursor:pointer; min-height:42px;" onchange="app.onStudentSelectChange(this.value)"></select>
+                        <button type="button" id="modal-pick-btn" tabindex="0" class="btn btn-primary btn-sm" style="padding: 0.45rem 0.75rem; font-weight: 700; white-space: nowrap; font-size: 0.85rem; min-height:42px;" onclick="app.pickSelectedModalStudent()" onkeydown="app.handlePickBtnKeyDown(event)">Pick</button>
+                    </div>
+                </div>
+
+                <div class="progress-bar-bg">
+                    <div id="modal-progress-bar" class="progress-bar-fill"></div>
+                </div>
+
+                <div class="student-display-card">
+                    <div id="modal-student-roll" class="student-roll-badge">Roll No: 1</div>
+                    <div style="margin-top: 0.35rem;">
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.1rem;">STUDENT NAME</label>
+                        <div id="modal-student-name" style="font-size:1.1rem; font-weight:700; color:white;">Student Name</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="text-align:center; display:block; font-size:0.88rem;">ENTER MARKS (MAX: <span id="modal-max-marks">10</span>)</label>
+                    <input type="text" id="modal-marks-input" class="form-control" style="font-size:1.6rem; text-align:center; font-weight:800; color:var(--secondary); height:54px; letter-spacing:0.05em;" placeholder="Enter Marks or '-' for Absent" onkeydown="if(event.key==='Enter') app.saveAndNextModalStudent()">
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block; text-align:center; margin-top:0.4rem;">Type mark and press Enter to auto-advance. Enter '-' for absent.</span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn" onclick="app.prevModalStudent()">◀ Previous</button>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn btn-warning" onclick="app.closeMarkEntryModal()">Close</button>
+                    <button id="modal-next-btn" class="btn btn-success" onclick="app.saveAndNextModalStudent()">Save & Next ▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STARTUP SECURITY GATE MODAL (FIRST TIME SETUP & UNLOCK) -->
+    <div id="startup-security-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <div class="modal-title" id="security-modal-title">🔐 GitHub Gist Security Gateway</div>
+            </div>
+            <div class="modal-body">
+                <!-- Setup Form (First Time Setup) -->
+                <div id="sec-setup-container" style="display:none;">
+                    <div style="background: rgba(14, 165, 233, 0.1); border: 1px solid var(--secondary); padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #bae6fd;">
+                        <strong>🔑 First-Time Setup Required</strong><br>
+                        Configure your GitHub Gist Personal Access Token. It will be encrypted using <strong>PBKDF2-SHA-256 + AES-256-GCM</strong> with your passphrase.
+                    </div>
+
+                    <div class="form-group">
+                        <label>GitHub Gist Token</label>
+                        <input type="password" id="sec-token-input" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+                        <span style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:0.25rem;">Requires minimum <code>gist</code> permission scope.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Security Passphrase</label>
+                        <input type="password" id="sec-passphrase-input" class="form-control" placeholder="Enter a strong passphrase..." autocomplete="off">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Confirm Security Passphrase</label>
+                        <input type="password" id="sec-passphrase-confirm" class="form-control" placeholder="Confirm passphrase..." autocomplete="off">
+                    </div>
+
+                    <button class="btn btn-primary" style="width:100%; height:48px; font-size:1rem; margin-top:0.5rem;" onclick="gistAuth.handleFirstTimeSetup()">🔐 Secure & Continue</button>
+                </div>
+
+                <!-- Unlock Form (Subsequent Startup) -->
+                <div id="sec-unlock-container" style="display:none;">
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent-green); padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: #a7f3d0;">
+                        <strong>🔒 Secure Unlock Required</strong><br>
+                        An encrypted GitHub Gist configuration was found. Enter your security passphrase to unlock.
+                    </div>
+
+                    <div class="form-group">
+                        <label>Security Passphrase</label>
+                        <input type="password" id="sec-unlock-passphrase" class="form-control" placeholder="Enter your security passphrase..." autocomplete="off" onkeydown="if(event.key==='Enter') gistAuth.handleUnlock()">
+                    </div>
+
+                    <button class="btn btn-success" style="width:100%; height:48px; font-size:1rem; margin-top:0.5rem;" onclick="gistAuth.handleUnlock()">🔓 Unlock & Continue</button>
+                    
+                    <div style="text-align:center; margin-top:1rem;">
+                        <button type="button" class="btn btn-sm" style="background:transparent; border:none; color:var(--text-muted); font-size:0.78rem; text-decoration:underline; cursor:pointer;" onclick="gistAuth.promptResetConfig()">Reconfigure Gist Token / Reset Security</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GITHUB GIST UPLOAD & STRUCTURED FILENAME MODAL -->
+    <div id="gist-upload-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">☁️ Upload JSON to GitHub Gist</div>
+                <button class="btn btn-sm" onclick="gistSync.closeUploadModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Teacher Short Name</label>
+                    <select id="gist-meta-teacher" class="form-control" onchange="gistSync.updateFilenamePreview()">
+                        <option value="NM">NM</option>
+                        <option value="PCG">PCG</option>
+                        <option value="BBar">BBar</option>
+                        <option value="BPG">BPG</option>
+                        <option value="DDey(S)">DDey(S)</option>
+                        <option value="Ddey(J)">Ddey(J)</option>
+                        <option value="AS">AS</option>
+                        <option value="CSM">CSM</option>
+                        <option value="GB">GB</option>
+                        <option value="BB">BB</option>
+                        <option value="RKH">RKH</option>
+                        <option value="HM">HM</option>
+                        <option value="DH">DH</option>
+                        <option value="SP">SP</option>
+                        <option value="Debnath">Debnath</option>
+                        <option value="BP">BP</option>
+                        <option value="AM">AM</option>
+                        <option value="Custom">Custom Teacher Name...</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="gist-custom-teacher-group" style="display:none;">
+                    <label>Custom Teacher Name</label>
+                    <input type="text" id="gist-custom-teacher-input" class="form-control" placeholder="e.g. XYZ" oninput="gistSync.updateFilenamePreview()">
+                </div>
+
+                <div class="form-group">
+                    <label>Class Name</label>
+                    <select id="gist-meta-class" class="form-control" onchange="gistSync.updateFilenamePreview()">
+                        <option value="Class V">Class V</option>
+                        <option value="Class VI">Class VI</option>
+                        <option value="Class VII">Class VII</option>
+                        <option value="Class VIII">Class VIII</option>
+                        <option value="Class IX">Class IX</option>
+                        <option value="Class X">Class X</option>
+                        <option value="Class XI">Class XI</option>
+                        <option value="Class XII">Class XII</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Subject Name</label>
+                    <select id="gist-meta-subject" class="form-control" onchange="gistSync.updateFilenamePreview()">
+                        <option value="Bengali">Bengali</option>
+                        <option value="English">English</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="Paribesh O Bijnan">Paribesh O Bijnan</option>
+                        <option value="Geography">Geography</option>
+                        <option value="History">History</option>
+                        <option value="Sanskrit">Sanskrit</option>
+                        <option value="Phy Sc">Phy Sc</option>
+                        <option value="Life Sc">Life Sc</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="ENVS">ENVS</option>
+                        <option value="Biology">Biology</option>
+                        <option value="Custom">Custom Subject...</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="gist-custom-subject-group" style="display:none;">
+                    <label>Custom Subject Name</label>
+                    <input type="text" id="gist-custom-subject-input" class="form-control" placeholder="e.g. Computer Science" oninput="gistSync.updateFilenamePreview()">
+                </div>
+
+                <div class="form-card" style="background:#0b1120; border-color:var(--border-color); margin-top:1rem;">
+                    <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.25rem;">AUTOMATIC STRUCTURED FILENAME PREVIEW</label>
+                    <div id="gist-filename-preview" style="font-size:0.95rem; font-weight:700; color:var(--secondary); word-break:break-all;">
+                        AM_Class V_Bengali_1st Sep_06_03 PM.json
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="gistSync.closeUploadModal()">Cancel</button>
+                <button class="btn btn-success" onclick="gistSync.executeGistUpload()">☁️ Save to GitHub Gist</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAME-NAME CONFLICT WARNING MODAL -->
+    <div id="gist-conflict-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <div class="modal-title" style="color:var(--accent-amber);">⚠️ Duplicate Filename Conflict</div>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:1rem; font-size:0.92rem; line-height:1.4;">
+                    A file with this exact name already exists on GitHub Gist:
+                    <div id="gist-conflict-filename" style="font-weight:700; color:var(--secondary); margin-top:0.4rem; word-break:break-all; background:#0b1120; padding:0.5rem; border-radius:6px; border:1px solid var(--border-color);">
+                        AM_Class V_Bengali_1st Sep_06_03 PM.json
+                    </div>
+                </div>
+                <p style="font-size:0.88rem; color:var(--text-muted);">
+                    Do you want to replace the existing remote file or keep both files by creating a new versioned copy?
+                </p>
+            </div>
+            <div class="modal-footer" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <button class="btn btn-warning" style="width:100%; justify-content:center;" onclick="gistSync.resolveConflict('replace')">🔄 Replace Existing File</button>
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="gistSync.resolveConflict('keep_both')">➕ Keep Both Files (Create Version)</button>
+                <button class="btn" style="width:100%; justify-content:center;" onclick="gistSync.closeConflictModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GITHUB GIST BROWSER & SYNCHRONIZATION MODAL -->
+    <div id="gist-browser-modal" class="modal-overlay">
+        <div class="modal-card modal-card-lg">
+            <div class="modal-header">
+                <div class="modal-title">📂 GitHub Gist Remote Files & Synchronization</div>
+                <button class="btn btn-sm" onclick="gistSync.closeGistBrowserModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+                    <input type="text" id="gist-search-input" class="form-control" style="flex:1; min-width:200px;" placeholder="🔍 Search JSON files by keyword (Teacher, Class, Subject, Version...)" oninput="gistSync.renderGistFilesList(this.value)">
+                    <button class="btn btn-primary btn-sm" onclick="gistSync.synchronizeFromGist()">🔄 Synchronize Now</button>
+                </div>
+
+                <div id="gist-files-list-container" style="max-height: 360px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #0b1120; padding: 0.5rem;">
+                    <!-- Rendered Gist JSON files -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="gistSync.closeGistBrowserModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOCAL STORAGE MANAGER MODAL -->
+    <div id="storage-modal" class="modal-overlay">
+        <div class="modal-card modal-card-lg">
+            <div class="modal-header">
+                <div class="modal-title">🗄️ Local Storage Sheet Backups</div>
+                <button class="btn btn-sm" onclick="app.closeStorageManager()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                    <span style="font-size:0.85rem; color:var(--text-muted);">Save current sheet state into browser's local storage or restore previous backups.</span>
+                    <button class="btn btn-success btn-sm" onclick="app.saveToStorage()">+ Save Current Sheet</button>
+                </div>
+                <div id="storage-list-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="app.closeStorageManager()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ Application Settings</div>
+                <button class="btn btn-sm" onclick="app.closeSettingsModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section-title">🖥️ Interface Controls</div>
+                <div class="settings-item">
+                    <span class="settings-item-label">Show Settings Icon in Header</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="set-show-settings-btn" onchange="app.toggleSettingsBtnVisible(this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="app.closeSettingsModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTRALIZED ANIMATED TOAST CONTAINER -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- APPLICATION & GITHUB GIST JAVASCRIPT LOGIC -->
+    <script>
+        /**
+         * Centralized Animated Toast Notification Engine
+         */
+        function showSuccessPopup(msg) { createToast(msg, 'success', '✓'); }
+        function showErrorPopup(msg) { createToast(msg, 'error', '✕'); }
+        function showWarningPopup(msg) { createToast(msg, 'warning', '⚠️'); }
+        function showInfoPopup(msg) { createToast(msg, 'info', 'ℹ️'); }
+
+        function createToast(message, type, icon) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span style="font-size:1.1rem; font-weight:800;">${icon}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        /**
+         * SECURE GITHUB GIST TOKEN ARCHITECTURE (PBKDF2-SHA-256 + AES-256-GCM)
+         * Plaintext Token exists ONLY in volatile JavaScript memory (RAM).
+         */
+        let runtimeGistToken = null;
+
+        const gistAuth = {
+            STORAGE_KEY: 'ut_gist_encrypted_config',
+            GIST_ID_KEY: 'ut_gist_id',
+
+            async deriveKey(passphrase, saltBuffer, iterations = 100000) {
+                const encoder = new TextEncoder();
+                const passphraseKey = await crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(passphrase),
+                    { name: 'PBKDF2' },
+                    false,
+                    ['deriveKey']
+                );
+                return await crypto.subtle.deriveKey(
+                    {
+                        name: 'PBKDF2',
+                        salt: saltBuffer,
+                        iterations: iterations,
+                        hash: 'SHA-256'
+                    },
+                    passphraseKey,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['encrypt', 'decrypt']
+                );
+            },
+
+            bufferToBase64(buffer) {
+                let binary = '';
+                const bytes = new Uint8Array(buffer);
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            },
+
+            base64ToBuffer(base64) {
+                const binary = atob(base64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes.buffer;
+            },
+
+            async encryptGistToken(token, passphrase) {
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const key = await this.deriveKey(passphrase, salt);
+                const encoder = new TextEncoder();
+                const ciphertext = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    encoder.encode(token)
+                );
+                return JSON.stringify({
+                    version: 1,
+                    algorithm: 'AES-GCM',
+                    kdf: 'PBKDF2-SHA-256',
+                    iterations: 100000,
+                    salt: this.bufferToBase64(salt),
+                    iv: this.bufferToBase64(iv),
+                    ciphertext: this.bufferToBase64(ciphertext)
+                });
+            },
+
+            async decryptGistToken(payloadJson, passphrase) {
+                const payload = JSON.parse(payloadJson);
+                const salt = this.base64ToBuffer(payload.salt);
+                const iv = this.base64ToBuffer(payload.iv);
+                const ciphertext = this.base64ToBuffer(payload.ciphertext);
+                const key = await this.deriveKey(passphrase, salt, payload.iterations || 100000);
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    key,
+                    ciphertext
+                );
+                const decoder = new TextDecoder();
+                return decoder.decode(decrypted);
+            },
+
+            checkStartupSecurityState() {
+                const modal = document.getElementById('startup-security-modal');
+                const setupBox = document.getElementById('sec-setup-container');
+                const unlockBox = document.getElementById('sec-unlock-container');
+                const title = document.getElementById('security-modal-title');
+
+                const encryptedPayload = localStorage.getItem(this.STORAGE_KEY);
+                modal.classList.add('active');
+                document.body.classList.add('modal-open');
+
+                if (!encryptedPayload) {
+                    title.innerText = '🔐 First-Time GitHub Gist Security Setup';
+                    setupBox.style.display = 'block';
+                    unlockBox.style.display = 'none';
+                } else {
+                    title.innerText = '🔒 GitHub Gist Secure Unlock';
+                    setupBox.style.display = 'none';
+                    unlockBox.style.display = 'block';
+                    document.getElementById('sec-unlock-passphrase').focus();
+                }
+                this.updateHeaderLockBtn();
+            },
+
+            async handleFirstTimeSetup() {
+                const token = document.getElementById('sec-token-input').value.trim();
+                const pass = document.getElementById('sec-passphrase-input').value;
+                const confirm = document.getElementById('sec-passphrase-confirm').value;
+
+                if (!token || !pass) {
+                    showErrorPopup('Please enter both GitHub Gist Token and Passphrase.');
+                    return;
+                }
+                if (pass !== confirm) {
+                    showErrorPopup('Security Passphrases do not match.');
+                    return;
+                }
+
+                try {
+                    const encryptedPayload = await this.encryptGistToken(token, pass);
+                    localStorage.setItem(this.STORAGE_KEY, encryptedPayload);
+                    runtimeGistToken = token;
+                    
+                    document.getElementById('sec-token-input').value = '';
+                    document.getElementById('sec-passphrase-input').value = '';
+                    document.getElementById('sec-passphrase-confirm').value = '';
+
+                    document.getElementById('startup-security-modal').classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                    this.updateHeaderLockBtn();
+                    showSuccessPopup('Gist Token encrypted and secured successfully!');
+                } catch (err) {
+                    showErrorPopup('Encryption failed: ' + err.message);
+                }
+            },
+
+            async handleUnlock() {
+                const pass = document.getElementById('sec-unlock-passphrase').value;
+                if (!pass) {
+                    showErrorPopup('Please enter your passphrase.');
+                    return;
+                }
+
+                const encryptedPayload = localStorage.getItem(this.STORAGE_KEY);
+                if (!encryptedPayload) {
+                    showErrorPopup('No encrypted configuration found.');
+                    return;
+                }
+
+                try {
+                    const decryptedToken = await this.decryptGistToken(encryptedPayload, pass);
+                    runtimeGistToken = decryptedToken;
+                    document.getElementById('sec-unlock-passphrase').value = '';
+
+                    document.getElementById('startup-security-modal').classList.remove('active');
+                    document.body.classList.remove('modal-open');
+                    this.updateHeaderLockBtn();
+                    showSuccessPopup('Security passphrase unlocked successfully!');
+                } catch (err) {
+                    showErrorPopup('Unable to unlock GitHub Gist Token. Please check your security passphrase.');
+                }
+            },
+
+            toggleLockState() {
+                if (runtimeGistToken) {
+                    runtimeGistToken = null;
+                    this.updateHeaderLockBtn();
+                    showInfoPopup('GitHub Gist session locked. Token cleared from RAM.');
+                } else {
+                    this.checkStartupSecurityState();
+                }
+            },
+
+            updateHeaderLockBtn() {
+                const btn = document.getElementById('btn-gist-security-lock');
+                const icon = document.getElementById('gist-lock-icon');
+                const text = document.getElementById('gist-lock-text');
+                if (!btn) return;
+
+                if (runtimeGistToken) {
+                    btn.classList.remove('locked');
+                    icon.innerText = '🔓';
+                    text.innerText = 'Lock Session';
+                } else {
+                    btn.classList.add('locked');
+                    icon.innerText = '🔒';
+                    text.innerText = 'Unlock Session';
+                }
+            },
+
+            promptResetConfig() {
+                if (confirm('Are you sure you want to reset your encrypted GitHub Gist configuration? You will need to re-enter your Token.')) {
+                    localStorage.removeItem(this.STORAGE_KEY);
+                    runtimeGistToken = null;
+                    this.checkStartupSecurityState();
+                }
+            }
+        };
+
+        /**
+         * GITHUB GIST REMOTE STORAGE & SYNCHRONIZATION ENGINE
+         */
+        const gistSync = {
+            pendingUploadPayload: null,
+
+            getFormattedDate(d = new Date()) {
+                const day = d.getDate();
+                let suffix = 'th';
+                if (day % 10 === 1 && day !== 11) suffix = 'st';
+                else if (day % 10 === 2 && day !== 12) suffix = 'nd';
+                else if (day % 10 === 3 && day !== 13) suffix = 'rd';
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${day}${suffix} ${months[d.getMonth()]}`;
+            },
+
+            getFormattedTime(d = new Date()) {
+                let hours = d.getHours();
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                const strHours = String(hours).padStart(2, '0');
+                return `${strHours}_${minutes} ${ampm}`;
+            },
+
+            sanitizeString(str) {
+                return str.replace(/[\/\x00-\x1F\x7F-\x9F]/g, '').trim();
+            },
+
+            generateFilename() {
+                let teacher = document.getElementById('gist-meta-teacher').value;
+                if (teacher === 'Custom') {
+                    teacher = document.getElementById('gist-custom-teacher-input').value.trim() || 'CustomTeacher';
+                }
+                teacher = this.sanitizeString(teacher);
+
+                const cls = this.sanitizeString(document.getElementById('gist-meta-class').value);
+
+                let subject = document.getElementById('gist-meta-subject').value;
+                if (subject === 'Custom') {
+                    subject = document.getElementById('gist-custom-subject-input').value.trim() || 'CustomSubject';
+                }
+                subject = this.sanitizeString(subject);
+
+                const dateStr = this.getFormattedDate();
+                const timeStr = this.getFormattedTime();
+
+                return `${teacher}_${cls}_${subject}_${dateStr}_${timeStr}.json`;
+            },
+
+            updateFilenamePreview() {
+                const teacherSel = document.getElementById('gist-meta-teacher').value;
+                document.getElementById('gist-custom-teacher-group').style.display = (teacherSel === 'Custom') ? 'block' : 'none';
+
+                const subjectSel = document.getElementById('gist-meta-subject').value;
+                document.getElementById('gist-custom-subject-group').style.display = (subjectSel === 'Custom') ? 'block' : 'none';
+
+                const filename = this.generateFilename();
+                document.getElementById('gist-filename-preview').innerText = filename;
+            },
+
+            openUploadModal() {
+                if (!runtimeGistToken) {
+                    gistAuth.checkStartupSecurityState();
+                    return;
+                }
+                document.getElementById('gist-upload-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+                this.updateFilenamePreview();
+            },
+
+            closeUploadModal() {
+                document.getElementById('gist-upload-modal').classList.remove('active');
+                document.body.classList.remove('modal-open');
+            },
+
+            async getOrCreateUserGistId() {
+                let gistId = localStorage.getItem(gistAuth.GIST_ID_KEY);
+                
+                if (gistId) {
+                    // Validate Gist existence
+                    try {
+                        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                            headers: { 'Authorization': `Bearer ${runtimeGistToken}` }
+                        });
+                        if (res.ok) return gistId;
+                    } catch (e) {}
+                }
+
+                // Search user gists
+                const listRes = await fetch('https://api.github.com/gists', {
+                    headers: { 'Authorization': `Bearer ${runtimeGistToken}` }
+                });
+                
+                if (!listRes.ok) {
+                    throw new Error('Gist Authentication Failed. Please check token permissions.');
+                }
+
+                const gists = await listRes.json();
+                const targetGist = gists.find(g => g.description === 'Unit Test Result Sheet Storage');
+                
+                if (targetGist) {
+                    localStorage.setItem(gistAuth.GIST_ID_KEY, targetGist.id);
+                    return targetGist.id;
+                }
+
+                // Create new designated Gist
+                const createRes = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${runtimeGistToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        description: 'Unit Test Result Sheet Storage',
+                        public: false,
+                        files: {
+                            'manifest.json': {
+                                content: JSON.stringify({ created: new Date().toISOString(), app: 'Unit Test Result Sheet Maker' })
+                            }
+                        }
+                    })
+                });
+
+                if (!createRes.ok) throw new Error('Failed to create storage Gist.');
+                const newGist = await createRes.json();
+                localStorage.setItem(gistAuth.GIST_ID_KEY, newGist.id);
+                return newGist.id;
+            },
+
+            async executeGistUpload() {
+                if (!runtimeGistToken) {
+                    gistAuth.checkStartupSecurityState();
+                    return;
+                }
+
+                const filename = this.generateFilename();
+                const jsonContent = JSON.stringify(app.state, null, 2);
+
+                try {
+                    const gistId = await this.getOrCreateUserGistId();
+                    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                        headers: { 'Authorization': `Bearer ${runtimeGistToken}` }
+                    });
+                    const gist = await res.json();
+
+                    if (gist.files && gist.files[filename]) {
+                        // Same name collision detected!
+                        this.pendingUploadPayload = { filename, jsonContent, gistId, gistFiles: gist.files };
+                        this.closeUploadModal();
+                        document.getElementById('gist-conflict-filename').innerText = filename;
+                        document.getElementById('gist-conflict-modal').classList.add('active');
+                        return;
+                    }
+
+                    // Direct upload
+                    await this.uploadFileToGist(gistId, filename, jsonContent);
+                    this.closeUploadModal();
+                    showSuccessPopup(`✓ File Uploaded Successfully: ${filename}`);
+                } catch (err) {
+                    showErrorPopup('GitHub Gist Upload Failed: ' + err.message);
+                }
+            },
+
+            async uploadFileToGist(gistId, filename, content) {
+                const patchRes = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${runtimeGistToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [filename]: { content: content }
+                        }
+                    })
+                });
+
+                if (!patchRes.ok) {
+                    throw new Error('Failed to write file to Gist.');
+                }
+            },
+
+            async resolveConflict(action) {
+                if (!this.pendingUploadPayload) return;
+                const { filename, jsonContent, gistId, gistFiles } = this.pendingUploadPayload;
+                document.getElementById('gist-conflict-modal').classList.remove('active');
+
+                try {
+                    if (action === 'replace') {
+                        await this.uploadFileToGist(gistId, filename, jsonContent);
+                        showSuccessPopup(`✓ File Replaced Successfully: ${filename}`);
+                    } else if (action === 'keep_both') {
+                        // Determine next version tag
+                        const baseName = filename.replace(/\.json$/, '');
+                        let versionIndex = 0;
+                        let targetFilename = `${baseName} V1.${versionIndex}.json`;
+
+                        while (gistFiles[targetFilename]) {
+                            versionIndex++;
+                            targetFilename = `${baseName} V1.${versionIndex}.json`;
+                        }
+
+                        await this.uploadFileToGist(gistId, targetFilename, jsonContent);
+                        showSuccessPopup(`✓ New Version Uploaded Successfully: ${targetFilename}`);
+                    }
+                } catch (err) {
+                    showErrorPopup('File Operation Failed: ' + err.message);
+                } finally {
+                    this.pendingUploadPayload = null;
+                }
+            },
+
+            closeConflictModal() {
+                document.getElementById('gist-conflict-modal').classList.remove('active');
+                this.pendingUploadPayload = null;
+            },
+
+            openGistBrowserModal() {
+                if (!runtimeGistToken) {
+                    gistAuth.checkStartupSecurityState();
+                    return;
+                }
+                document.getElementById('gist-browser-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+                this.synchronizeFromGist();
+            },
+
+            closeGistBrowserModal() {
+                document.getElementById('gist-browser-modal').classList.remove('active');
+                document.body.classList.remove('modal-open');
+            },
+
+            async synchronizeFromGist() {
+                if (!runtimeGistToken) {
+                    gistAuth.checkStartupSecurityState();
+                    return;
+                }
+
+                const container = document.getElementById('gist-files-list-container');
+                container.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted);">🔄 Synchronizing remote files...</div>';
+
+                try {
+                    const gistId = await this.getOrCreateUserGistId();
+                    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+                        headers: { 'Authorization': `Bearer ${runtimeGistToken}` }
+                    });
+                    
+                    if (!res.ok) throw new Error('Failed to retrieve Gist file list.');
+                    const gist = await res.json();
+
+                    this.cachedGistFiles = gist.files;
+                    this.renderGistFilesList(document.getElementById('gist-search-input').value);
+                    showSuccessPopup('✓ Synchronization Successful');
+                } catch (err) {
+                    container.innerHTML = `<div style="padding:1rem; text-align:center; color:var(--accent-red);">✕ ${err.message}</div>`;
+                    showErrorPopup('Synchronization Failed: ' + err.message);
+                }
+            },
+
+            renderGistFilesList(filterText = '') {
+                const container = document.getElementById('gist-files-list-container');
+                if (!this.cachedGistFiles) return;
+
+                const search = filterText.toLowerCase().trim();
+                const files = Object.keys(this.cachedGistFiles).filter(f => f.endsWith('.json') && f !== 'manifest.json');
+
+                if (files.length === 0) {
+                    container.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted);">No JSON sheet files found in GitHub Gist.</div>';
+                    return;
+                }
+
+                const filtered = files.filter(f => f.toLowerCase().includes(search));
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted);">No matching filenames found.</div>';
+                    return;
+                }
+
+                let html = '<table class="storage-table"><thead><tr><th>Filename</th><th>Size</th><th>Action</th></tr></thead><tbody>';
+                
+                filtered.forEach(filename => {
+                    const fileObj = this.cachedGistFiles[filename];
+                    const sizeKb = (fileObj.size / 1024).toFixed(1);
+                    html += `
+                        <tr>
+                            <td style="font-weight:600; color:var(--secondary); word-break:break-all;">${filename}</td>
+                            <td>${sizeKb} KB</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="gistSync.retrieveFile('${filename}')">Retrieve</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            },
+
+            async retrieveFile(filename) {
+                if (!this.cachedGistFiles || !this.cachedGistFiles[filename]) return;
+                
+                try {
+                    const rawUrl = this.cachedGistFiles[filename].raw_url;
+                    const res = await fetch(rawUrl);
+                    if (!res.ok) throw new Error('Failed to download raw file content.');
+                    
+                    const json = await res.json();
+                    
+                    // Validate JSON state structure
+                    if (json.schoolName !== undefined || json.students !== undefined) {
+                        app.state = Object.assign(app.defaultState(), json);
+                        app.saveToLocalStorage();
+                        app.renderAll();
+                        this.closeGistBrowserModal();
+                        showSuccessPopup(`✓ File Retrieved Successfully: ${filename}`);
+                    } else {
+                        throw new Error('Invalid sheet structure in remote JSON.');
+                    }
+                } catch (err) {
+                    showErrorPopup('Retrieval Failed: ' + err.message);
+                }
+            }
+        };
+
+        /**
+         * CORE APPLICATION CONTROLLER (`app`)
+         */
+        const app = {
+            currentTab: 'tab-marks',
+            activeGradeCategory: 'total',
+            modalStudentList: [],
+            modalCurrentIndex: 0,
+            modalActiveColId: null,
+
+            defaultState() {
+                return {
+                    schoolName: 'XYZ HIGH SCHOOL (H.S.)',
+                    schoolAddress: 'P.O.- SAMPLE, DIST.- SAMPLE, PIN- 000000',
+                    className: 'CLASS - V',
+                    subjectName: 'BENGALI',
+                    sectionName: 'A',
+                    year: '2026',
+
+                    fontFamily: "'Hind Siliguri', sans-serif",
+                    headingFontSize: 18,
+                    headingBold: true,
+                    headingItalic: false,
+                    headingUnderline: false,
+
+                    rowHeight: 26,
+                    highlightAbsent: false,
+                    absentCols: [],
+                    absentHighlightColor: '#fee2e2',
+
+                    thFontSize: 13,
+                    thBold: true,
+                    thItalic: false,
+                    tdFontSize: 12,
+                    colWidths: {},
+
+                    orientation: 'portrait',
+                    pageNumberPos: 'bottom-right',
+                    pageNumberSize: 10,
+                    pageNumberBold: false,
+
+                    marginTop: 12,
+                    marginBottom: 12,
+                    marginLeft: 12,
+                    marginRight: 12,
+
+                    sepWidth: 100,
+                    sepThickness: 1,
+                    sepSpTop: 5,
+                    sepSpBot: 5,
+
+                    colLabels: {
+                        roll: 'ROLL NO',
+                        name: 'NAME OF THE STUDENTS',
+                        noofD: 'NO OF D',
+                        total: 'TOTAL MARKS',
+                        grade: 'OVERALL GRADE'
+                    },
+
+                    columns: [
+                        { id: 'col_1', label: '1ST UNIT', maxMarks: 10 },
+                        { id: 'col_2', label: '2ND UNIT', maxMarks: 20 },
+                        { id: 'col_3', label: '3RD UNIT', maxMarks: 70 }
+                    ],
+
+                    students: [
+                        { roll: '1', name: 'RAHUL DAS', marks: { col_1: '8', col_2: '16', col_3: '58' } },
+                        { roll: '2', name: 'SNEHA ROY', marks: { col_1: '9', col_2: '18', col_3: '64' } },
+                        { roll: '3', name: 'AMIT SARKAR', marks: { col_1: '-', col_2: '12', col_3: '42' } }
+                    ],
+
+                    showUnitGrades: false,
+                    showNoOfD: true,
+                    treatHyphenAsD: true,
+                    gradeSource: 'total',
+
+                    totalGradeRules: [
+                        { grade: 'A+', min: 90, max: 100 },
+                        { grade: 'A', min: 80, max: 89 },
+                        { grade: 'B+', min: 70, max: 79 },
+                        { grade: 'B', min: 60, max: 69 },
+                        { grade: 'C', min: 45, max: 59 },
+                        { grade: 'D', min: 0, max: 44 }
+                    ],
+
+                    unitGradeRules: [
+                        { grade: 'A+', min: 90, max: 100 },
+                        { grade: 'A', min: 80, max: 89 },
+                        { grade: 'B', min: 60, max: 79 },
+                        { grade: 'C', min: 40, max: 59 },
+                        { grade: 'D', min: 0, max: 39 }
+                    ]
+                };
+            },
+
+            state: null,
+
+            init() {
+                this.loadFromLocalStorage();
+                this.renderAll();
+                this.setupSecretTrigger();
+
+                // Initialize Gist Security Gate
+                setTimeout(() => gistAuth.checkStartupSecurityState(), 300);
+            },
+
+            saveToLocalStorage() {
+                localStorage.setItem('ut_result_sheet_state', JSON.stringify(this.state));
+            },
+
+            loadFromLocalStorage() {
+                const saved = localStorage.getItem('ut_result_sheet_state');
+                if (saved) {
+                    try {
+                        this.state = Object.assign(this.defaultState(), JSON.parse(saved));
+                    } catch (e) {
+                        this.state = this.defaultState();
+                    }
+                } else {
+                    this.state = this.defaultState();
+                }
+            },
+
+            renderAll() {
+                this.populateFormFields();
+                this.renderColumnsList();
+                this.renderRosterManagerList();
+                this.renderGradeRulesTable();
+                this.renderA4Preview();
+            },
+
+            populateFormFields() {
+                const s = this.state;
+                document.getElementById('cfg-school-name').value = s.schoolName;
+                document.getElementById('cfg-school-address').value = s.schoolAddress;
+                document.getElementById('cfg-class-name').value = s.className;
+                document.getElementById('cfg-subject-name').value = s.subjectName;
+                document.getElementById('cfg-section-name').value = s.sectionName;
+                document.getElementById('cfg-year').value = s.year;
+
+                document.getElementById('cfg-font-family').value = s.fontFamily;
+                document.getElementById('cfg-heading-font-size').value = s.headingFontSize;
+                document.getElementById('cfg-heading-font-size-val').innerText = `${s.headingFontSize}px`;
+
+                document.getElementById('btn-fmt-bold').classList.toggle('active', s.headingBold);
+                document.getElementById('btn-fmt-italic').classList.toggle('active', s.headingItalic);
+                document.getElementById('btn-fmt-underline').classList.toggle('active', s.headingUnderline);
+
+                document.getElementById('cfg-row-height').value = s.rowHeight;
+                document.getElementById('cfg-row-height-val').innerText = `${s.rowHeight}px`;
+
+                document.getElementById('cfg-highlight-absent').checked = s.highlightAbsent;
+                document.getElementById('cfg-absent-highlight-color').value = s.absentHighlightColor;
+                document.getElementById('cfg-absent-highlight-color-hex').value = s.absentHighlightColor;
+
+                document.getElementById('cfg-th-font-size').value = s.thFontSize;
+                document.getElementById('cfg-th-font-size-val').innerText = `${s.thFontSize}px`;
+                document.getElementById('btn-th-bold').classList.toggle('active', s.thBold);
+                document.getElementById('btn-th-italic').classList.toggle('active', s.thItalic);
+
+                document.getElementById('cfg-td-font-size').value = s.tdFontSize;
+                document.getElementById('cfg-td-font-size-val').innerText = `${s.tdFontSize}px`;
+
+                document.getElementById('cfg-orientation').value = s.orientation;
+                document.getElementById('cfg-page-number-pos').value = s.pageNumberPos;
+                document.getElementById('cfg-page-number-size').value = s.pageNumberSize;
+                document.getElementById('cfg-page-number-size-val').innerText = `${s.pageNumberSize}px`;
+                document.getElementById('btn-page-num-bold').classList.toggle('active', s.pageNumberBold);
+
+                document.getElementById('cfg-margin-top').value = s.marginTop;
+                document.getElementById('cfg-margin-bottom').value = s.marginBottom;
+                document.getElementById('cfg-margin-left').value = s.marginLeft;
+                document.getElementById('cfg-margin-right').value = s.marginRight;
+
+                document.getElementById('cfg-sep-width').value = s.sepWidth;
+                document.getElementById('cfg-sep-width-val').innerText = `${s.sepWidth}%`;
+                document.getElementById('cfg-sep-thickness').value = s.sepThickness;
+                document.getElementById('cfg-sep-thickness-val').innerText = `${s.sepThickness}px`;
+                document.getElementById('cfg-sep-sp-top').value = s.sepSpTop;
+                document.getElementById('cfg-sep-sp-bot').value = s.sepSpBot;
+
+                document.getElementById('cfg-lbl-roll').value = s.colLabels.roll;
+                document.getElementById('cfg-lbl-name').value = s.colLabels.name;
+                document.getElementById('cfg-lbl-noof-d').value = s.colLabels.noofD;
+                document.getElementById('cfg-lbl-total').value = s.colLabels.total;
+                document.getElementById('cfg-lbl-grade').value = s.colLabels.grade;
+
+                document.getElementById('cfg-show-unit-grades').checked = s.showUnitGrades;
+                document.getElementById('cfg-show-noof-d').checked = s.showNoOfD;
+                document.getElementById('cfg-treat-hyphen-d').checked = s.treatHyphenAsD;
+                document.getElementById('cfg-grade-source').value = s.gradeSource;
+
+                this.renderAbsentColsSelector();
+            },
+
+            updateHeadingFromInput() {
+                this.state.schoolName = document.getElementById('cfg-school-name').value;
+                this.state.schoolAddress = document.getElementById('cfg-school-address').value;
+                this.state.className = document.getElementById('cfg-class-name').value;
+                this.state.subjectName = document.getElementById('cfg-subject-name').value;
+                this.state.sectionName = document.getElementById('cfg-section-name').value;
+                this.state.year = document.getElementById('cfg-year').value;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updateTypographyFromInput() {
+                this.state.fontFamily = document.getElementById('cfg-font-family').value;
+                this.state.headingFontSize = parseInt(document.getElementById('cfg-heading-font-size').value, 10);
+                document.getElementById('cfg-heading-font-size-val').innerText = `${this.state.headingFontSize}px`;
+
+                this.state.thFontSize = parseInt(document.getElementById('cfg-th-font-size').value, 10);
+                document.getElementById('cfg-th-font-size-val').innerText = `${this.state.thFontSize}px`;
+
+                this.state.tdFontSize = parseInt(document.getElementById('cfg-td-font-size').value, 10);
+                document.getElementById('cfg-td-font-size-val').innerText = `${this.state.tdFontSize}px`;
+
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            toggleFormat(key) {
+                this.state[key] = !this.state[key];
+                this.populateFormFields();
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updateRowHeightFromInput() {
+                this.state.rowHeight = parseInt(document.getElementById('cfg-row-height').value, 10);
+                document.getElementById('cfg-row-height-val').innerText = `${this.state.rowHeight}px`;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            stepSlider(inputId, delta) {
+                const slider = document.getElementById(inputId);
+                if (!slider) return;
+                let val = parseInt(slider.value, 10) + delta;
+                val = Math.max(parseInt(slider.min, 10), Math.min(parseInt(slider.max, 10), val));
+                slider.value = val;
+                slider.dispatchEvent(new Event('input'));
+            },
+
+            toggleAbsentHighlight(checked) {
+                this.state.highlightAbsent = checked;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            renderAbsentColsSelector() {
+                const container = document.getElementById('cfg-absent-cols-container');
+                container.innerHTML = '';
+                this.state.columns.forEach(col => {
+                    const label = document.createElement('label');
+                    label.style.cssText = 'display:flex; align-items:center; gap:0.5rem; font-size:0.82rem; color:white; cursor:pointer;';
+                    const isChecked = this.state.absentCols.includes(col.id);
+                    label.innerHTML = `<input type="checkbox" style="accent-color:var(--secondary);" ${isChecked ? 'checked' : ''} onchange="app.toggleAbsentCol('${col.id}', this.checked)"> ${col.label}`;
+                    container.appendChild(label);
+                });
+            },
+
+            toggleAbsentCol(colId, checked) {
+                if (checked) {
+                    if (!this.state.absentCols.includes(colId)) this.state.absentCols.push(colId);
+                } else {
+                    this.state.absentCols = this.state.absentCols.filter(id => id !== colId);
+                }
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updateAbsentHighlightColor(hex) {
+                this.state.absentHighlightColor = hex;
+                document.getElementById('cfg-absent-highlight-color').value = hex;
+                document.getElementById('cfg-absent-highlight-color-hex').value = hex;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updatePageFromInput() {
+                this.state.orientation = document.getElementById('cfg-orientation').value;
+                this.state.pageNumberPos = document.getElementById('cfg-page-number-pos').value;
+                this.state.pageNumberSize = parseInt(document.getElementById('cfg-page-number-size').value, 10);
+                document.getElementById('cfg-page-number-size-val').innerText = `${this.state.pageNumberSize}px`;
+
+                this.state.marginTop = parseInt(document.getElementById('cfg-margin-top').value, 10) || 12;
+                this.state.marginBottom = parseInt(document.getElementById('cfg-margin-bottom').value, 10) || 12;
+                this.state.marginLeft = parseInt(document.getElementById('cfg-margin-left').value, 10) || 12;
+                this.state.marginRight = parseInt(document.getElementById('cfg-margin-right').value, 10) || 12;
+
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updateSeparatorFromInput() {
+                this.state.sepWidth = parseInt(document.getElementById('cfg-sep-width').value, 10);
+                document.getElementById('cfg-sep-width-val').innerText = `${this.state.sepWidth}%`;
+
+                this.state.sepThickness = parseInt(document.getElementById('cfg-sep-thickness').value, 10);
+                document.getElementById('cfg-sep-thickness-val').innerText = `${this.state.sepThickness}px`;
+
+                this.state.sepSpTop = parseInt(document.getElementById('cfg-sep-sp-top').value, 10) || 0;
+                this.state.sepSpBot = parseInt(document.getElementById('cfg-sep-sp-bot').value, 10) || 0;
+
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            toggleMandatoryLabelsCollapse() {
+                const body = document.getElementById('mandatory-labels-body');
+                const chevron = document.getElementById('mandatory-labels-chevron');
+                if (body.style.display === 'none') {
+                    body.style.display = 'block';
+                    chevron.innerText = '▼';
+                } else {
+                    body.style.display = 'none';
+                    chevron.innerText = '▶';
+                }
+            },
+
+            updateColumnLabelsFromInput() {
+                this.state.colLabels.roll = document.getElementById('cfg-lbl-roll').value;
+                this.state.colLabels.name = document.getElementById('cfg-lbl-name').value;
+                this.state.colLabels.noofD = document.getElementById('cfg-lbl-noof-d').value;
+                this.state.colLabels.total = document.getElementById('cfg-lbl-total').value;
+                this.state.colLabels.grade = document.getElementById('cfg-lbl-grade').value;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            renderColumnsList() {
+                const container = document.getElementById('columns-list-container');
+                container.innerHTML = '';
+                this.state.columns.forEach((col, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'column-item';
+                    item.innerHTML = `
+                        <div style="flex:1; min-width:140px;">
+                            <input type="text" class="form-control" style="font-weight:700;" value="${col.label}" onchange="app.updateColumnLabel('${col.id}', this.value)">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:0.4rem;">
+                            <span style="font-size:0.75rem; color:var(--text-muted);">Max:</span>
+                            <input type="number" class="form-control" style="width:65px; text-align:center;" value="${col.maxMarks}" onchange="app.updateColumnMaxMarks('${col.id}', this.value)">
+                        </div>
+                        <div style="display:flex; gap:0.3rem;">
+                            <button class="btn btn-sm btn-primary" onclick="app.openMarkEntryModal('${col.id}')">✏️ Marks</button>
+                            <button class="btn btn-sm btn-danger" onclick="app.removeColumn('${col.id}')">✕</button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            },
+
+            addColumn() {
+                const newId = 'col_' + Date.now();
+                this.state.columns.push({
+                    id: newId,
+                    label: `UNIT - ${this.state.columns.length + 1}`,
+                    maxMarks: 10
+                });
+                this.saveToLocalStorage();
+                this.renderAll();
+            },
+
+            removeColumn(id) {
+                if (this.state.columns.length <= 1) {
+                    showErrorPopup('At least one marks column must remain.');
+                    return;
+                }
+                this.state.columns = this.state.columns.filter(c => c.id !== id);
+                this.saveToLocalStorage();
+                this.renderAll();
+            },
+
+            updateColumnLabel(id, label) {
+                const col = this.state.columns.find(c => c.id === id);
+                if (col) col.label = label;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updateColumnMaxMarks(id, val) {
+                const col = this.state.columns.find(c => c.id === id);
+                if (col) col.maxMarks = parseFloat(val) || 10;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            addNewStudent() {
+                const rollInput = document.getElementById('new-student-roll');
+                const nameInput = document.getElementById('new-student-name');
+                const roll = rollInput.value.trim();
+                const name = nameInput.value.trim().toUpperCase();
+
+                if (!roll || !name) {
+                    showErrorPopup('Please enter Roll No and Student Name.');
+                    return;
+                }
+
+                if (this.state.students.some(s => s.roll === roll)) {
+                    showErrorPopup(`Student with Roll No ${roll} already exists.`);
+                    return;
+                }
+
+                this.state.students.push({ roll, name, marks: {} });
+                this.sortStudents();
+                this.saveToLocalStorage();
+
+                rollInput.value = '';
+                nameInput.value = '';
+                this.renderRosterManagerList();
+                this.renderA4Preview();
+                showSuccessPopup(`Added Student: ${name}`);
+            },
+
+            sortStudents() {
+                this.state.students.sort((a, b) => {
+                    const numA = parseInt(a.roll, 10);
+                    const numB = parseInt(b.roll, 10);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return a.roll.localeCompare(b.roll);
+                });
+            },
+
+            renderRosterManagerList(filter = '') {
+                const container = document.getElementById('roster-manager-list');
+                const badge = document.getElementById('student-count-badge');
+                badge.innerText = this.state.students.length;
+                container.innerHTML = '';
+
+                const search = filter.toLowerCase().trim();
+                const filtered = this.state.students.filter(s => 
+                    s.roll.toLowerCase().includes(search) || s.name.toLowerCase().includes(search)
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div style="padding:0.75rem; text-align:center; color:var(--text-muted); font-size:0.85rem;">No student records found.</div>';
+                    return;
+                }
+
+                filtered.forEach(s => {
+                    const row = document.createElement('div');
+                    row.className = 'roster-row-item';
+                    row.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:0.6rem;">
+                            <span class="student-roll-badge" style="margin:0;">Roll ${s.roll}</span>
+                            <span style="font-weight:700; color:white;">${s.name}</span>
+                        </div>
+                        <button class="btn btn-sm btn-danger" onclick="app.deleteStudent('${s.roll}')">✕</button>
+                    `;
+                    container.appendChild(row);
+                });
+            },
+
+            deleteStudent(roll) {
+                this.state.students = this.state.students.filter(s => s.roll !== roll);
+                this.saveToLocalStorage();
+                this.renderRosterManagerList(document.getElementById('roster-search-input').value);
+                this.renderA4Preview();
+            },
+
+            /* Mark Entry Modal Handler */
+            openMarkEntryModal(colId) {
+                if (this.state.students.length === 0) {
+                    showErrorPopup('Please add student records first.');
+                    return;
+                }
+
+                this.modalActiveColId = colId;
+                const col = this.state.columns.find(c => c.id === colId);
+                document.getElementById('modal-col-title').innerText = `${col.label} Marks Entry`;
+                document.getElementById('modal-max-marks').innerText = col.maxMarks;
+
+                this.modalStudentList = [...this.state.students];
+                this.modalCurrentIndex = 0;
+
+                const modal = document.getElementById('mark-entry-modal');
+                modal.classList.add('active');
+                document.body.classList.add('modal-open');
+
+                this.populateModalStudentSelect();
+                this.loadModalCurrentStudent();
+            },
+
+            closeMarkEntryModal() {
+                document.getElementById('mark-entry-modal').classList.remove('active');
+                document.body.classList.remove('modal-open');
+                this.renderA4Preview();
+            },
+
+            populateModalStudentSelect() {
+                const select = document.getElementById('modal-student-select');
+                select.innerHTML = '';
+                this.modalStudentList.forEach((s, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.innerText = `Roll ${s.roll} - ${s.name}`;
+                    select.appendChild(opt);
+                });
+            },
+
+            loadModalCurrentStudent() {
+                if (this.modalStudentList.length === 0) return;
+                const s = this.modalStudentList[this.modalCurrentIndex];
+                document.getElementById('modal-progress-text').innerText = `Student ${this.modalCurrentIndex + 1} of ${this.modalStudentList.length}`;
+                document.getElementById('modal-progress-bar').style.width = `${((this.modalCurrentIndex + 1) / this.modalStudentList.length) * 100}%`;
+
+                document.getElementById('modal-student-roll').innerText = `Roll No: ${s.roll}`;
+                document.getElementById('modal-student-name').innerText = s.name;
+                document.getElementById('modal-student-select').value = this.modalCurrentIndex;
+
+                const currentVal = (s.marks && s.marks[this.modalActiveColId]) ? s.marks[this.modalActiveColId] : '';
+                const input = document.getElementById('modal-marks-input');
+                input.value = currentVal;
+                setTimeout(() => { input.focus(); input.select(); }, 100);
+            },
+
+            saveAndNextModalStudent() {
+                const s = this.modalStudentList[this.modalCurrentIndex];
+                const val = document.getElementById('modal-marks-input').value.trim();
+
+                if (!s.marks) s.marks = {};
+                s.marks[this.modalActiveColId] = val;
+
+                // Sync back to main state
+                const target = this.state.students.find(st => st.roll === s.roll);
+                if (target) {
+                    if (!target.marks) target.marks = {};
+                    target.marks[this.modalActiveColId] = val;
+                }
+
+                this.saveToLocalStorage();
+
+                if (this.modalCurrentIndex < this.modalStudentList.length - 1) {
+                    this.modalCurrentIndex++;
+                    this.loadModalCurrentStudent();
+                } else {
+                    showSuccessPopup('Marks Entry Completed!');
+                    this.closeMarkEntryModal();
+                }
+            },
+
+            prevModalStudent() {
+                if (this.modalCurrentIndex > 0) {
+                    this.modalCurrentIndex--;
+                    this.loadModalCurrentStudent();
+                }
+            },
+
+            filterModalStudentList(val) {
+                const search = val.toLowerCase().trim();
+                const filtered = this.state.students.filter(s => s.roll.toLowerCase().includes(search) || s.name.toLowerCase().includes(search));
+                if (filtered.length > 0) {
+                    this.modalStudentList = filtered;
+                    this.modalCurrentIndex = 0;
+                    this.populateModalStudentSelect();
+                    this.loadModalCurrentStudent();
+                }
+            },
+
+            onStudentSelectChange(idx) {
+                this.modalCurrentIndex = parseInt(idx, 10);
+                this.loadModalCurrentStudent();
+            },
+
+            toggleFocusCycle(checked) {},
+            handleSearchKeyDown(e) {},
+            handlePickBtnKeyDown(e) {},
+            pickSelectedModalStudent() {
+                const select = document.getElementById('modal-student-select');
+                this.onStudentSelectChange(select.value);
+            },
+
+            toggleUnitGrades(checked) {
+                this.state.showUnitGrades = checked;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            toggleNoOfD(checked) {
+                this.state.showNoOfD = checked;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            toggleTreatHyphenAsD(checked) {
+                this.state.treatHyphenAsD = checked;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            updateGradeSourceFromInput() {
+                this.state.gradeSource = document.getElementById('cfg-grade-source').value;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            switchGradeRuleCategory(cat) {
+                this.activeGradeCategory = cat;
+                document.getElementById('btn-grade-cat-total').classList.toggle('active', cat === 'total');
+                document.getElementById('btn-grade-cat-unit').classList.toggle('active', cat === 'unit');
+                document.getElementById('grade-rules-header-title').innerText = cat === 'total' ? 'Total Marks Grading Rules' : 'Unit Marks Grading Rules';
+                this.renderGradeRulesTable();
+            },
+
+            renderGradeRulesTable() {
+                const tbody = document.getElementById('grade-rules-tbody');
+                tbody.innerHTML = '';
+                const rules = this.activeGradeCategory === 'total' ? this.state.totalGradeRules : this.state.unitGradeRules;
+
+                rules.forEach((r, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><input type="text" value="${r.grade}" onchange="app.updateGradeRule(${idx}, 'grade', this.value)"></td>
+                        <td><input type="number" value="${r.min}" onchange="app.updateGradeRule(${idx}, 'min', this.value)"></td>
+                        <td><input type="number" value="${r.max}" onchange="app.updateGradeRule(${idx}, 'max', this.value)"></td>
+                        <td><button class="btn btn-sm btn-danger" style="padding:0.2rem 0.4rem;" onclick="app.removeGradeRule(${idx})">✕</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            updateGradeRule(idx, field, val) {
+                const rules = this.activeGradeCategory === 'total' ? this.state.totalGradeRules : this.state.unitGradeRules;
+                if (field === 'grade') rules[idx].grade = val.trim();
+                else rules[idx][field] = parseFloat(val) || 0;
+                this.saveToLocalStorage();
+                this.renderA4Preview();
+            },
+
+            addGradeRule() {
+                const rules = this.activeGradeCategory === 'total' ? this.state.totalGradeRules : this.state.unitGradeRules;
+                rules.push({ grade: 'G', min: 0, max: 10 });
+                this.saveToLocalStorage();
+                this.renderGradeRulesTable();
+                this.renderA4Preview();
+            },
+
+            removeGradeRule(idx) {
+                const rules = this.activeGradeCategory === 'total' ? this.state.totalGradeRules : this.state.unitGradeRules;
+                rules.splice(idx, 1);
+                this.saveToLocalStorage();
+                this.renderGradeRulesTable();
+                this.renderA4Preview();
+            },
+
+            calculateGrade(score, maxPossible, isUnit = false) {
+                if (score === '-' || score === '' || score === undefined) return '-';
+                const num = parseFloat(score);
+                if (isNaN(num)) return '-';
+
+                const pct = (num / maxPossible) * 100;
+                const rules = isUnit ? this.state.unitGradeRules : this.state.totalGradeRules;
+
+                for (let r of rules) {
+                    if (pct >= r.min && pct <= r.max) return r.grade;
+                }
+                return 'D';
+            },
+
+            calculateNoOfD(student) {
+                let count = 0;
+                this.state.columns.forEach(col => {
+                    const m = student.marks ? student.marks[col.id] : '-';
+                    if (m === '-' || m === '' || m === undefined) {
+                        if (this.state.treatHyphenAsD) count++;
+                    } else {
+                        const g = this.calculateGrade(m, col.maxMarks, true);
+                        if (g === 'D') count++;
+                    }
+                });
+                return count;
+            },
+
+            calculateStudentTotal(student) {
+                let sum = 0;
+                let valid = false;
+                this.state.columns.forEach(col => {
+                    const m = student.marks ? student.marks[col.id] : '';
+                    if (m !== '-' && m !== '' && m !== undefined) {
+                        const val = parseFloat(m);
+                        if (!isNaN(val)) {
+                            sum += val;
+                            valid = true;
+                        }
+                    }
+                });
+                return valid ? sum : '-';
+            },
+
+            renderA4Preview() {
+                const container = document.getElementById('a4-pages-container');
+                container.innerHTML = '';
+
+                const page = document.createElement('div');
+                page.className = `a4-page ${this.state.orientation}`;
+                page.style.padding = `${this.state.marginTop}mm ${this.state.marginRight}mm ${this.state.marginBottom}mm ${this.state.marginLeft}mm`;
+                page.style.fontFamily = this.state.fontFamily;
+
+                let headerHtml = `
+                    <div class="sheet-header">
+                        <div class="sheet-year-badge" style="font-size:${this.state.headingFontSize * 0.8}px; font-weight:700;">${this.state.year}</div>
+                        <div class="sheet-title" style="font-size:${this.state.headingFontSize}px; font-weight:${this.state.headingBold ? '700' : '400'}; font-style:${this.state.headingItalic ? 'italic' : 'normal'}; text-decoration:${this.state.headingUnderline ? 'underline' : 'none'};">${this.state.schoolName}</div>
+                        <div class="sheet-address" style="font-size:${this.state.headingFontSize * 0.75}px;">${this.state.schoolAddress}</div>
+                        <div class="sheet-meta-row" style="font-size:${this.state.headingFontSize * 0.8}px; font-weight:600;">
+                            <span>${this.state.className}</span>
+                            <span>SUBJECT: ${this.state.subjectName}</span>
+                            <span>SEC: ${this.state.sectionName}</span>
+                        </div>
+                    </div>
+                    <hr class="sheet-separator" style="width:${this.state.sepWidth}%; height:${this.state.sepThickness}px; margin-top:${this.state.sepSpTop}px; margin-bottom:${this.state.sepSpBot}px;">
+                `;
+
+                let tableHtml = `<table class="sheet-table"><thead><tr>`;
+                tableHtml += `<th class="col-roll" style="font-size:${this.state.thFontSize}px; font-weight:${this.state.thBold ? '700' : '400'}; font-style:${this.state.thItalic ? 'italic' : 'normal'}; width:8%;">${this.state.colLabels.roll}</th>`;
+                tableHtml += `<th class="col-name" style="font-size:${this.state.thFontSize}px; font-weight:${this.state.thBold ? '700' : '400'}; font-style:${this.state.thItalic ? 'italic' : 'normal'}; width:28%;">${this.state.colLabels.name}</th>`;
+
+                let totalMax = 0;
+                this.state.columns.forEach(col => {
+                    totalMax += col.maxMarks;
+                    tableHtml += `<th style="font-size:${this.state.thFontSize}px; font-weight:${this.state.thBold ? '700' : '400'}; font-style:${this.state.thItalic ? 'italic' : 'normal'};">${col.label} (${col.maxMarks})</th>`;
+                });
+
+                if (this.state.showNoOfD) {
+                    tableHtml += `<th style="font-size:${this.state.thFontSize}px; font-weight:${this.state.thBold ? '700' : '400'}; font-style:${this.state.thItalic ? 'italic' : 'normal'};">${this.state.colLabels.noofD}</th>`;
+                }
+                tableHtml += `<th style="font-size:${this.state.thFontSize}px; font-weight:${this.state.thBold ? '700' : '400'}; font-style:${this.state.thItalic ? 'italic' : 'normal'};">${this.state.colLabels.total} (${totalMax})</th>`;
+                tableHtml += `<th style="font-size:${this.state.thFontSize}px; font-weight:${this.state.thBold ? '700' : '400'}; font-style:${this.state.thItalic ? 'italic' : 'normal'};">${this.state.colLabels.grade}</th>`;
+                tableHtml += `</tr></thead><tbody>`;
+
+                this.state.students.forEach(s => {
+                    let isAbsentRow = false;
+                    if (this.state.highlightAbsent && this.state.absentCols.length > 0) {
+                        isAbsentRow = this.state.absentCols.some(colId => {
+                            const val = s.marks ? s.marks[colId] : '';
+                            return val === '-' || val === '';
+                        });
+                    }
+
+                    const rowBgStyle = isAbsentRow ? `background-color:${this.state.absentHighlightColor};` : '';
+                    tableHtml += `<tr style="height:${this.state.rowHeight}px; ${rowBgStyle}">`;
+                    tableHtml += `<td style="font-size:${this.state.tdFontSize}px;">${s.roll}</td>`;
+                    tableHtml += `<td class="col-name" style="font-size:${this.state.tdFontSize}px; font-weight:600;">${s.name}</td>`;
+
+                    this.state.columns.forEach(col => {
+                        const m = s.marks ? s.marks[col.id] : '-';
+                        let displayVal = m || '-';
+                        if (this.state.showUnitGrades && displayVal !== '-') {
+                            const ug = this.calculateGrade(displayVal, col.maxMarks, true);
+                            displayVal += ` (${ug})`;
+                        }
+                        tableHtml += `<td style="font-size:${this.state.tdFontSize}px;">${displayVal}</td>`;
+                    });
+
+                    if (this.state.showNoOfD) {
+                        const dCount = this.calculateNoOfD(s);
+                        tableHtml += `<td style="font-size:${this.state.tdFontSize}px; font-weight:700;">${dCount}</td>`;
+                    }
+
+                    const tot = this.calculateStudentTotal(s);
+                    const grade = this.calculateGrade(tot, totalMax, false);
+
+                    tableHtml += `<td style="font-size:${this.state.tdFontSize}px; font-weight:700;">${tot}</td>`;
+                    tableHtml += `<td style="font-size:${this.state.tdFontSize}px; font-weight:800;">${grade}</td>`;
+                    tableHtml += `</tr>`;
+                });
+
+                tableHtml += `</tbody></table>`;
+                page.innerHTML = headerHtml + tableHtml;
+                container.appendChild(page);
+            },
+
+            adjustZoom(delta) {
+                const el = document.getElementById('a4-pages-container');
+                let curr = parseFloat(el.style.transform.replace('scale(', '').replace(')', '')) || 0.4;
+                curr = Math.max(0.2, Math.min(1.2, curr + delta));
+                el.style.transform = `scale(${curr})`;
+                document.getElementById('zoom-value').innerText = `${Math.round(curr * 100)}%`;
+            },
+
+            resetZoom() {
+                const el = document.getElementById('a4-pages-container');
+                el.style.transform = `scale(0.4)`;
+                document.getElementById('zoom-value').innerText = `40%`;
+            },
+
+            switchTab(tabId, btn) {
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+                document.getElementById(tabId).classList.add('active');
+                if (btn) btn.classList.add('active');
+
+                const leftPanel = document.getElementById('left-panel');
+                const rightPanel = document.getElementById('right-panel');
+
+                if (document.body.classList.contains('mode-mobile')) {
+                    if (tabId === 'tab-preview') {
+                        leftPanel.classList.add('preview-active-mobile');
+                        rightPanel.classList.remove('hidden-mobile');
+                    } else {
+                        leftPanel.classList.remove('preview-active-mobile');
+                        rightPanel.classList.add('hidden-mobile');
+                    }
+                }
+            },
+
+            toggleViewMode() {
+                const isDesktop = document.body.classList.contains('mode-desktop');
+                if (isDesktop) {
+                    document.body.classList.remove('mode-desktop');
+                    document.body.classList.add('mode-mobile');
+                    document.getElementById('view-mode-icon').innerText = '📱';
+                    document.getElementById('view-mode-text').innerText = 'Mobile View';
+                } else {
+                    document.body.classList.remove('mode-mobile');
+                    document.body.classList.add('mode-desktop');
+                    document.getElementById('view-mode-icon').innerText = '🖥️';
+                    document.getElementById('view-mode-text').innerText = 'Desktop View';
+                }
+            },
+
+            togglePanelLock() {},
+
+            newSheet() {
+                if (confirm('Create a new blank sheet? Any unsaved changes will be lost.')) {
+                    this.state = this.defaultState();
+                    this.saveToLocalStorage();
+                    this.renderAll();
+                    showSuccessPopup('Created New Sheet.');
+                }
+            },
+
+            exportJSON() {
+                const filename = gistSync.generateFilename();
+                const jsonStr = JSON.stringify(this.state, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+                showSuccessPopup(`Exported JSON: ${filename}`);
+            },
+
+            importJSON(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const json = JSON.parse(evt.target.result);
+                        this.state = Object.assign(this.defaultState(), json);
+                        this.saveToLocalStorage();
+                        this.renderAll();
+                        showSuccessPopup('Local JSON imported successfully!');
+                    } catch (err) {
+                        showErrorPopup('Invalid JSON file format.');
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            },
+
+            handleExcelUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        if (rows.length < 2) {
+                            showErrorPopup('Excel file contains no data.');
+                            return;
+                        }
+
+                        this.state.students = [];
+                        for (let i = 1; i < rows.length; i++) {
+                            const r = rows[i];
+                            if (r[0] && r[1]) {
+                                this.state.students.push({
+                                    roll: String(r[0]).trim(),
+                                    name: String(r[1]).trim().toUpperCase(),
+                                    marks: {}
+                                });
+                            }
+                        }
+
+                        this.sortStudents();
+                        this.saveToLocalStorage();
+                        this.renderAll();
+                        showSuccessPopup(`Imported ${this.state.students.length} students from Excel.`);
+                    } catch (err) {
+                        showErrorPopup('Failed to parse Excel file.');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                e.target.value = '';
+            },
+
+            downloadSampleExcel() {
+                const wsData = [
+                    ['ROLL NO', 'STUDENT NAME'],
+                    [1, 'RAHUL DAS'],
+                    [2, 'SNEHA ROY'],
+                    [3, 'AMIT SARKAR']
+                ];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Students');
+                XLSX.writeFile(wb, 'Sample_Student_List.xlsx');
+            },
+
+            exportPDF() {
+                window.print();
+            },
+
+            openStorageManager() {
+                document.getElementById('storage-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+                this.renderStorageList();
+            },
+
+            closeStorageManager() {
+                document.getElementById('storage-modal').classList.remove('active');
+                document.body.classList.remove('modal-open');
+            },
+
+            renderStorageList() {
+                const container = document.getElementById('storage-list-container');
+                const saved = localStorage.getItem('ut_result_sheet_backups');
+                let backups = saved ? JSON.parse(saved) : [];
+
+                if (backups.length === 0) {
+                    container.innerHTML = '<div style="padding:1rem; text-align:center; color:var(--text-muted);">No local storage backups saved yet.</div>';
+                    return;
+                }
+
+                let html = '<table class="storage-table"><thead><tr><th>Timestamp</th><th>Class & Subject</th><th>Action</th></tr></thead><tbody>';
+                backups.forEach((b, idx) => {
+                    html += `
+                        <tr>
+                            <td>${b.timestamp}</td>
+                            <td>${b.className} - ${b.subjectName}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="app.restoreBackup(${idx})">Restore</button>
+                                <button class="btn btn-sm btn-danger" onclick="app.deleteBackup(${idx})">✕</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            },
+
+            saveToStorage() {
+                const saved = localStorage.getItem('ut_result_sheet_backups');
+                let backups = saved ? JSON.parse(saved) : [];
+                backups.push({
+                    timestamp: new Date().toLocaleString(),
+                    className: this.state.className,
+                    subjectName: this.state.subjectName,
+                    data: this.state
+                });
+                localStorage.setItem('ut_result_sheet_backups', JSON.stringify(backups));
+                this.renderStorageList();
+                showSuccessPopup('Saved current sheet backup locally.');
+            },
+
+            restoreBackup(idx) {
+                const saved = localStorage.getItem('ut_result_sheet_backups');
+                if (!saved) return;
+                let backups = JSON.parse(saved);
+                if (backups[idx]) {
+                    this.state = backups[idx].data;
+                    this.saveToLocalStorage();
+                    this.renderAll();
+                    this.closeStorageManager();
+                    showSuccessPopup('Backup restored successfully.');
+                }
+            },
+
+            deleteBackup(idx) {
+                const saved = localStorage.getItem('ut_result_sheet_backups');
+                if (!saved) return;
+                let backups = JSON.parse(saved);
+                backups.splice(idx, 1);
+                localStorage.setItem('ut_result_sheet_backups', JSON.stringify(backups));
+                this.renderStorageList();
+            },
+
+            openSettingsModal() {
+                document.getElementById('settings-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+            },
+
+            closeSettingsModal() {
+                document.getElementById('settings-modal').classList.remove('active');
+                document.body.classList.remove('modal-open');
+            },
+
+            toggleSettingsBtnVisible(checked) {
+                document.getElementById('btn-settings-trigger').style.display = checked ? 'inline-flex' : 'none';
+            },
+
+            setupSecretTrigger() {
+                const trigger = document.getElementById('secret-settings-trigger');
+                const ring = document.getElementById('secret-progress-ring');
+                let timer = null;
+
+                const start = () => {
+                    ring.classList.add('active', 'animating');
+                    timer = setTimeout(() => {
+                        this.openSettingsModal();
+                        ring.classList.remove('active', 'animating');
+                    }, 3000);
+                };
+
+                const stop = () => {
+                    clearTimeout(timer);
+                    ring.classList.remove('active', 'animating');
+                };
+
+                trigger.addEventListener('mousedown', start);
+                trigger.addEventListener('mouseup', stop);
+                trigger.addEventListener('mouseleave', stop);
+                trigger.addEventListener('touchstart', start);
+                trigger.addEventListener('touchend', stop);
+            }
+        };
+
+        // On DOM Load -> Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.innerWidth >= 1024) {
+                document.body.classList.add('mode-desktop');
+            } else {
+                document.body.classList.add('mode-mobile');
+            }
+            app.init();
+        });
+    </script>
+</body>
+</html>
