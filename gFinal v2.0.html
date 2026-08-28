@@ -1,0 +1,4238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Unit Test Result Sheet Maker v1.0</title>
+
+    <!-- Dependencies via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Google Fonts: English & Bengali Support -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;600;700&family=Noto+Serif+Bengali:wght@400;600;700&family=Roboto:wght@400;500;700&family=Tiro+Bangla&display=swap" rel="stylesheet">
+
+    <style>
+        /* CSS Variables & Modern Palette */
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: rgba(79, 70, 229, 0.15);
+            --secondary: #0ea5e9;
+            --secondary-hover: #0284c7;
+            --bg-dark: #090d16;
+            --panel-bg: #131d31;
+            --panel-card: #1e293b;
+            --border-color: #334155;
+            --border-focus: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-red: #ef4444;
+            --accent-red-hover: #dc2626;
+            --accent-amber: #f59e0b;
+            --accent-amber-hover: #d97706;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+            --font-ui: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --touch-target: 48px;
+            --header-height: 64px;
+            --nav-height: 52px;
+            --left-panel-width: 460px;
+            --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-ui);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            overflow: hidden;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body.modal-open {
+            overflow: hidden !important;
+            touch-action: none;
+        }
+
+        /* App Shell Layout */
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            position: relative;
+        }
+
+        header {
+            background: rgba(19, 29, 49, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+            gap: 0.75rem;
+            flex-shrink: 0;
+            min-height: var(--header-height);
+            position: relative;
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-width: 0;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 800;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+            box-shadow: 0 2px 10px rgba(79, 70, 229, 0.4);
+            flex-shrink: 0;
+        }
+
+        .brand-text-container {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .brand-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .brand-version {
+            font-size: 0.72rem;
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        .top-toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 0.5rem;
+            align-items: center;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.25) transparent;
+            padding: 0.25rem 0.25rem;
+            min-width: 0;
+            flex: 1 1 auto;
+            justify-content: flex-start;
+        }
+
+        .top-toolbar::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .top-toolbar::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.35);
+            border-radius: 4px;
+        }
+
+        .top-toolbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .secret-trigger-zone {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 54px;
+            height: 54px;
+            z-index: 60;
+            cursor: default;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            background: transparent;
+            border: none;
+            outline: none;
+            box-shadow: none;
+            opacity: 0;
+        }
+
+        .secret-progress-ring {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            width: 38px;
+            height: 38px;
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 61;
+        }
+
+        .secret-progress-ring.active {
+            opacity: 0.85;
+            transform: scale(1);
+        }
+
+        .secret-progress-ring svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .secret-progress-ring circle {
+            fill: none;
+            stroke-width: 3.5;
+            stroke-linecap: round;
+        }
+
+        .secret-progress-ring .bg {
+            stroke: rgba(255, 255, 255, 0.15);
+        }
+
+        .secret-progress-ring .progress {
+            stroke: var(--secondary);
+            stroke-dasharray: 88;
+            stroke-dashoffset: 88;
+        }
+
+        .secret-progress-ring.animating .progress {
+            transition: stroke-dashoffset 3s linear;
+            stroke-dashoffset: 0;
+        }
+
+        .ui-hidden-override {
+            display: none !important;
+        }
+
+        .btn {
+            background: var(--panel-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            min-height: var(--touch-target);
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            outline: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn:hover {
+            background: #334155;
+            border-color: #475569;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+            background: #1e293b;
+        }
+
+        .btn:focus-visible {
+            outline: 2px solid var(--border-focus);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn-primary { background: var(--primary); border-color: transparent; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        .btn-success { background: var(--accent-green); border-color: transparent; }
+        .btn-success:hover { background: var(--accent-green-hover); }
+
+        .btn-danger { background: var(--accent-red); border-color: transparent; }
+        .btn-danger:hover { background: var(--accent-red-hover); }
+
+        .btn-warning { background: var(--accent-amber); color: #000; border-color: transparent; }
+        .btn-warning:hover { background: var(--accent-amber-hover); color: #000; }
+
+        .btn-github { background: #24292e; color: #ffffff; border-color: #444c56; }
+        .btn-github:hover { background: #2c3137; border-color: #636e7b; }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+            transform: scale(1.05);
+        }
+
+        .btn-sm {
+            min-height: 38px;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .2s ease;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .2s ease;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .settings-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.65rem 0.85rem;
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+            gap: 0.75rem;
+        }
+
+        .settings-item-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .settings-section-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 1.15rem 0 0.5rem 0;
+            padding-bottom: 0.3rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .settings-section-title:first-of-type {
+            margin-top: 0;
+        }
+
+        /* Workspace Wrapper */
+        .workspace-wrapper {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            height: calc(100vh - var(--header-height));
+            height: calc(100dvh - var(--header-height));
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Left Control Panel */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            background: var(--panel-bg);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Right Preview Panel */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+            background: #050811;
+            position: relative;
+        }
+
+        /* Panel Resizer Divider Bar */
+        .panel-resizer {
+            width: 10px;
+            background: #1e293b;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 10px;
+            cursor: col-resize;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+            z-index: 30;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .panel-resizer:hover, .panel-resizer.active {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .panel-resizer.locked {
+            cursor: not-allowed;
+            background: #151e2e;
+        }
+
+        .resizer-handle-line {
+            width: 2px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin-top: 12px;
+        }
+
+        .panel-resizer:hover .resizer-handle-line,
+        .panel-resizer.active .resizer-handle-line {
+            background: #ffffff;
+        }
+
+        .panel-resizer.locked .resizer-handle-line {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .panel-lock-btn {
+            background: var(--panel-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.82rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, background 0.2s ease;
+            outline: none;
+            padding: 0;
+            z-index: 35;
+        }
+
+        .panel-lock-btn:hover {
+            transform: scale(1.12);
+            background: var(--primary);
+            border-color: transparent;
+        }
+
+        /* Horizontally Scrollable Tabs Navigation */
+        .tabs-nav-bar {
+            background: #0b1120;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.25) transparent;
+            flex-shrink: 0;
+            z-index: 40;
+            position: relative;
+            padding: 0 0.25rem;
+        }
+
+        .tabs-nav-bar::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        .tabs-nav-bar::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 3px;
+        }
+
+        .tabs-nav-bar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tab-btn {
+            flex: 0 0 auto;
+            min-height: var(--nav-height);
+            padding: 0.6rem 0.95rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.86rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--secondary);
+            border-bottom-color: var(--secondary);
+            background: var(--panel-bg);
+        }
+
+        .tab-btn-preview {
+            background: rgba(14, 165, 233, 0.08);
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        .tab-btn-preview.active {
+            background: var(--panel-bg);
+            color: #38bdf8;
+            border-bottom-color: #38bdf8;
+        }
+
+        .main-workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            background: var(--panel-bg);
+        }
+
+        .tab-content {
+            display: none;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 1.25rem 1rem;
+            padding-bottom: calc(2rem + var(--safe-area-bottom));
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .content-container {
+            max-width: 780px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .form-card {
+            background: var(--panel-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.15rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-card-title {
+            font-weight: 700;
+            color: var(--secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: color 0.15s ease, opacity 0.15s ease;
+        }
+
+        .collapsible-header:hover {
+            opacity: 0.85;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .form-control {
+            width: 100%;
+            min-height: var(--touch-target);
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-inline-style {
+            display: flex;
+            gap: 0.4rem;
+            background: #0f172a;
+            padding: 0.3rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .style-btn {
+            flex: 1;
+            min-height: 40px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.4rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .style-btn:hover { background: #334155; color: white; }
+        .style-btn.active { background: var(--primary); color: white; }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-height: var(--touch-target);
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            accent-color: var(--secondary);
+            min-width: 0;
+            height: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .slider-value {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            font-weight: 700;
+            min-width: 48px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .btn-slider {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+            box-shadow: var(--shadow-sm);
+            padding: 0;
+        }
+
+        .btn-slider:active {
+            transform: scale(0.92);
+        }
+
+        .btn-slider-dec { background-color: var(--accent-red); }
+        .btn-slider-dec:hover { background-color: var(--accent-red-hover); }
+
+        .btn-slider-inc { background-color: var(--accent-green); }
+        .btn-slider-inc:hover { background-color: var(--accent-green-hover); }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f172a;
+            padding: 0.75rem 0.9rem;
+            border-radius: 8px;
+            margin-bottom: 0.6rem;
+            border: 1px solid var(--border-color);
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .column-item span {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .roster-row-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-card);
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.45rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            gap: 0.5rem;
+        }
+
+        .roster-row-item:hover {
+            border-color: var(--secondary);
+        }
+
+        #tab-preview.tab-content {
+            padding: 0;
+            display: none;
+            height: 100%;
+            background: #050811;
+        }
+
+        #tab-preview.tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-workspace {
+            flex: 1;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .preview-toolbar {
+            position: sticky;
+            top: 0.75rem;
+            background: rgba(19, 29, 49, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 0.5rem 0.85rem;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
+            z-index: 25;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .preview-scroll-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow-x: auto;
+            padding-bottom: 2rem;
+        }
+
+        .a4-page {
+            background: white;
+            color: black;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+            margin-bottom: 2rem;
+            position: relative;
+            box-sizing: border-box;
+            line-height: 1.35;
+            font-variant-ligatures: normal;
+            text-rendering: optimizeLegibility;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .a4-page.portrait {
+            width: 210mm;
+            height: 297mm;
+            min-height: 297mm;
+            max-height: 297mm;
+        }
+
+        .a4-page.landscape {
+            width: 297mm;
+            height: 210mm;
+            min-height: 210mm;
+            max-height: 210mm;
+        }
+
+        .sheet-header {
+            width: 100%;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .sheet-year-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
+            line-height: 1.2;
+        }
+
+        .sheet-title {
+            text-align: center;
+            text-transform: uppercase;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+
+        .sheet-address {
+            text-align: center;
+            margin-top: 3px;
+            word-break: break-word;
+            line-height: 1.25;
+        }
+
+        .sheet-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            padding: 0 4px;
+            line-height: 1.25;
+        }
+
+        .sheet-separator {
+            border: none;
+            background-color: black;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .sheet-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            table-layout: fixed;
+        }
+
+        .sheet-table th, 
+        .sheet-table td {
+            border: 1px solid #000;
+            text-align: center;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            font-variant-ligatures: normal;
+            box-sizing: border-box;
+            vertical-align: middle;
+        }
+
+        .sheet-table th {
+            background-color: #f2f2f2;
+        }
+
+        .sheet-table th.col-name,
+        .sheet-table td.col-name {
+            text-align: left;
+            padding-left: 6px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            padding: 0.75rem;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            width: 100%;
+            max-width: 540px;
+            max-height: 90vh;
+            max-height: 90dvh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px) scale(0.96);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            margin: auto;
+        }
+
+        .modal-card-lg {
+            max-width: 760px;
+        }
+
+        .modal-overlay.active .modal-card {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            background: #0b1120;
+            padding: 0.9rem 1.15rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .modal-body {
+            padding: 1.15rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
+        }
+
+        .modal-footer {
+            background: #0b1120;
+            padding: 0.85rem 1.15rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--secondary);
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .student-display-card {
+            background: #0b1120;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.9rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .student-roll-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            margin-bottom: 0.4rem;
+        }
+
+        #modal-pick-btn:focus, #modal-pick-btn:focus-visible,
+        #modal-next-btn:focus, #modal-next-btn:focus-visible,
+        #modal-search-filter:focus, #modal-search-filter:focus-visible,
+        #modal-marks-input:focus, #modal-marks-input:focus-visible {
+            outline: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.4) !important;
+        }
+
+        .storage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .storage-table th, .storage-table td {
+            padding: 0.65rem 0.6rem;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .storage-table th {
+            background: #0b1120;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .storage-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            left: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 300;
+            pointer-events: none;
+            max-width: 440px;
+            margin-left: auto;
+        }
+
+        .toast {
+            background: #1e293b;
+            color: white;
+            padding: 0.85rem 1.15rem;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary);
+            box-shadow: var(--shadow-lg);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            pointer-events: auto;
+            animation: slideInMobile 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .toast.success { border-left-color: var(--accent-green); }
+        .toast.error { border-left-color: var(--accent-red); }
+        .toast.warning { border-left-color: var(--accent-amber); }
+        .toast.info { border-left-color: var(--secondary); }
+
+        @keyframes slideInMobile {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .rules-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+
+        .rules-table th, .rules-table td {
+            padding: 0.45rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .rules-table input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            text-align: center;
+            font-size: 0.9rem;
+            min-height: 36px;
+        }
+
+        /* View Toggle Button Style */
+        .btn-view-toggle {
+            background: #1e293b;
+            border-color: var(--secondary);
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+        .btn-view-toggle:hover {
+            background: rgba(14, 165, 233, 0.15);
+            border-color: var(--border-focus);
+        }
+
+        /* GitHub Security Status Indicator */
+        .github-status-badge {
+            font-size: 0.72rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .github-status-badge.unlocked {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .github-status-badge.locked {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .filename-preview-box {
+            background: #0b1120;
+            border: 1px dashed var(--secondary);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.88rem;
+            color: #38bdf8;
+            text-align: center;
+        }
+
+        /* Desktop & Mobile Modes */
+        body.mode-desktop .app-shell {
+            max-width: 100% !important;
+            margin: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        body.mode-desktop header {
+            flex-direction: row !important;
+            align-items: center !important;
+            padding: 0.5rem 1.25rem !important;
+            gap: 1rem !important;
+            justify-content: space-between !important;
+        }
+
+        body.mode-desktop .brand {
+            justify-content: flex-start !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.mode-desktop .top-toolbar {
+            justify-content: flex-start !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            padding-bottom: 0.25rem !important;
+            min-width: 0 !important;
+            flex: 1 1 auto !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+
+        body.mode-desktop .left-panel {
+            width: var(--left-panel-width, 460px) !important;
+            min-width: 300px;
+            max-width: 75vw;
+            display: flex !important;
+            height: 100% !important;
+        }
+
+        body.mode-desktop .panel-resizer {
+            display: flex !important;
+        }
+
+        body.mode-desktop .right-panel {
+            display: flex !important;
+            flex: 1 !important;
+        }
+
+        body.mode-desktop .tabs-nav-bar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            justify-content: flex-start !important;
+            padding: 0 0.5rem !important;
+            flex-shrink: 0 !important;
+            background: #0b1120 !important;
+        }
+
+        body.mode-desktop .tab-btn {
+            display: inline-flex !important;
+            flex: 0 0 auto !important;
+            padding: 0.6rem 0.95rem !important;
+            font-size: 0.85rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        body.mode-desktop #tab-btn-preview {
+            display: none !important;
+        }
+
+        body.mode-desktop .content-container {
+            max-width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1.25rem !important;
+        }
+
+        body.mode-desktop .modal-card {
+            max-height: 90vh !important;
+            border-radius: 14px !important;
+        }
+
+        body.mode-desktop .modal-footer {
+            display: flex !important;
+            justify-content: flex-end !important;
+            gap: 0.5rem !important;
+        }
+
+        body.mode-desktop .modal-footer .btn {
+            width: auto !important;
+        }
+
+        body.mode-mobile .app-shell {
+            max-width: 480px !important;
+            margin: 0 auto !important;
+            border-left: 1px solid var(--border-color) !important;
+            border-right: 1px solid var(--border-color) !important;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8) !important;
+        }
+
+        body.mode-mobile header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            padding: 0.65rem 0.85rem !important;
+            gap: 0.5rem !important;
+        }
+
+        body.mode-mobile .brand {
+            justify-content: flex-start !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.mode-mobile .top-toolbar {
+            justify-content: flex-start !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            padding-bottom: 0.2rem !important;
+            flex-wrap: nowrap !important;
+            -webkit-overflow-scrolling: touch !important;
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+
+        body.mode-mobile .workspace-wrapper {
+            flex-direction: column !important;
+        }
+
+        body.mode-mobile .panel-resizer {
+            display: none !important;
+        }
+
+        body.mode-mobile .left-panel {
+            width: 100% !important;
+            flex-shrink: 0 !important;
+        }
+
+        body.mode-mobile .left-panel.preview-active-mobile {
+            height: auto !important;
+            min-height: auto !important;
+            flex: 0 0 auto !important;
+        }
+
+        body.mode-mobile .left-panel.preview-active-mobile #main-workspace {
+            display: none !important;
+        }
+
+        body.mode-mobile .left-panel.hidden-mobile {
+            display: none !important;
+        }
+
+        body.mode-mobile .right-panel {
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            height: 100% !important;
+            min-height: 0 !important;
+        }
+
+        body.mode-mobile .right-panel.hidden-mobile {
+            display: none !important;
+        }
+
+        body.mode-mobile .tabs-nav-bar {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            justify-content: flex-start !important;
+            padding: 0 0.25rem !important;
+            width: 100% !important;
+        }
+
+        body.mode-mobile .tab-btn {
+            flex: 0 0 auto !important;
+            padding: 0.6rem 0.85rem !important;
+            font-size: 0.82rem !important;
+        }
+
+        body.mode-mobile .content-container {
+            max-width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        body.mode-mobile .modal-card {
+            max-height: 94vh !important;
+            max-height: 94dvh !important;
+            border-radius: 12px !important;
+        }
+
+        body.mode-mobile .modal-footer {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.45rem !important;
+        }
+
+        body.mode-mobile .modal-footer .btn {
+            width: 100% !important;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                overflow: visible !important;
+            }
+            header, nav, .tabs-nav-bar, .panel-resizer, .left-panel, .preview-toolbar, .modal-overlay, .toast-container, #secret-settings-trigger, #secret-progress-ring {
+                display: none !important;
+            }
+            .app-shell, .workspace-wrapper, .right-panel, .preview-workspace, .preview-scroll-wrapper {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                background: transparent !important;
+            }
+            #a4-pages-container {
+                transform: none !important;
+            }
+            .a4-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                page-break-after: always;
+                break-after: page;
+            }
+            .a4-page:last-child {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="mode-desktop">
+
+    <div class="app-shell">
+        <header>
+            <div id="secret-settings-trigger" class="secret-trigger-zone" aria-hidden="true"></div>
+            <div id="secret-progress-ring" class="secret-progress-ring">
+                <svg viewBox="0 0 32 32">
+                    <circle class="bg" cx="16" cy="16" r="14"></circle>
+                    <circle class="progress" cx="16" cy="16" r="14"></circle>
+                </svg>
+            </div>
+
+            <div class="brand">
+                <div class="brand-logo">UT</div>
+                <div class="brand-text-container">
+                    <div class="brand-title">Unit Test Result Sheet Maker</div>
+                    <span class="brand-version">v1.0 • GitHub Cloud Sync & Encryption</span>
+                </div>
+            </div>
+
+            <div class="top-toolbar" id="top-toolbar">
+                <button id="btn-toggle-view-mode" class="btn btn-sm btn-view-toggle" onclick="app.toggleViewMode()" title="Toggle Desktop / Mobile Layout State">
+                    <span id="view-mode-icon">🖥️</span> <span id="view-mode-text">Desktop View</span>
+                </button>
+
+                <button id="btn-ctrl-new-sheet" class="btn btn-warning" onclick="app.newSheet()"><span>📄</span> New Sheet</button>
+                <button id="btn-ctrl-upload-excel" class="btn" onclick="document.getElementById('excel-file-input').click()"><span>📊</span> Upload Excel</button>
+                <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display:none;" onchange="app.handleExcelUpload(event)">
+                
+                <button id="btn-ctrl-sample" class="btn btn-sm" onclick="app.downloadSampleExcel()">📥 Sample</button>
+                
+                <button id="btn-ctrl-import-json" class="btn" onclick="document.getElementById('json-file-input').click()">📂 Import JSON</button>
+                <input type="file" id="json-file-input" accept=".json" style="display:none;" onchange="app.importJSON(event)">
+                
+                <button id="btn-ctrl-export-json" class="btn" onclick="app.exportJSON()">💾 Local JSON</button>
+                
+                <!-- GitHub Integration Buttons -->
+                <button id="btn-ctrl-github-save" class="btn btn-github" onclick="app.openGitHubExportModal()"><span>☁️</span> Save to GitHub</button>
+                <button id="btn-ctrl-github-sync" class="btn btn-github" onclick="app.openGitHubSyncModal()"><span>🔄</span> GitHub Sync</button>
+                <button id="btn-ctrl-github-lock" class="btn btn-logout btn-sm" onclick="app.lockGitHubSession()" title="Lock GitHub Security Session (RAM Only Token Cleanup)">
+                    <span id="github-lock-icon">🔒</span> Lock GitHub
+                </button>
+
+                <button id="btn-ctrl-storage" class="btn" onclick="app.openStorageManager()"><span>🗄️</span> Storage</button>
+                <button id="btn-ctrl-export-pdf" class="btn btn-primary" onclick="app.exportPDF()"><span>🖨️</span> Export PDF</button>
+                
+                <button id="btn-settings-trigger" class="btn btn-sm" style="display:none; background:#1e293b; border-color:var(--secondary); color:var(--secondary);" onclick="app.openSettingsModal()" title="UI Control & Visibility Settings">
+                    <span>⚙️</span> Settings
+                </button>
+            </div>
+        </header>
+
+        <div class="workspace-wrapper" id="workspace-wrapper">
+            <div class="left-panel" id="left-panel">
+                <nav class="tabs-nav-bar" id="app-tabs-navbar">
+                    <button id="tab-btn-heading" class="tab-btn" onclick="app.switchTab('tab-heading', this)">📝 Heading</button>
+                    <button id="tab-btn-table-style" class="tab-btn" onclick="app.switchTab('tab-table-style', this)">📐 Table Style</button>
+                    <button id="tab-btn-page" class="tab-btn" onclick="app.switchTab('tab-page', this)">📄 Page & Layout</button>
+                    <button id="tab-btn-marks" class="tab-btn active" onclick="app.switchTab('tab-marks', this)">👥 Marks & Cols</button>
+                    <button id="tab-btn-grades" class="tab-btn" onclick="app.switchTab('tab-grades', this)">🎯 Grading</button>
+                    <button id="tab-btn-preview" class="tab-btn tab-btn-preview" onclick="app.switchTab('tab-preview', this)">👁️ A4 Preview</button>
+                </nav>
+
+                <main class="main-workspace" id="main-workspace">
+                    <!-- Tab 1: Heading Content -->
+                    <section id="tab-heading" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">🏫 School & Examination Details</div>
+                                <div class="form-group">
+                                    <label>School Name (Row 1)</label>
+                                    <input type="text" id="cfg-school-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Short Address / Subtitle (Row 2)</label>
+                                    <input type="text" id="cfg-school-address" class="form-control" oninput="app.updateHeadingFromInput()">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Class</label>
+                                        <input type="text" id="cfg-class-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Subject</label>
+                                        <input type="text" id="cfg-subject-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Section</label>
+                                        <input type="text" id="cfg-section-name" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Top Right Year</label>
+                                        <input type="text" id="cfg-year" class="form-control" oninput="app.updateHeadingFromInput()">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">✍️ Unified Heading Typography</div>
+                                <div class="form-group">
+                                    <label>Font Family (Bengali / English)</label>
+                                    <select id="cfg-font-family" class="form-control" onchange="app.updateTypographyFromInput()">
+                                        <option value="'Hind Siliguri', sans-serif">Hind Siliguri (Bengali / English)</option>
+                                        <option value="'Noto Sans Bengali', sans-serif">Noto Sans Bengali</option>
+                                        <option value="'Noto Serif Bengali', serif">Noto Serif Bengali</option>
+                                        <option value="'Tiro Bangla', serif">Tiro Bangla</option>
+                                        <option value="'Inter', sans-serif">Inter (Modern English)</option>
+                                        <option value="'Roboto', sans-serif">Roboto</option>
+                                        <option value="Arial, sans-serif">Arial</option>
+                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Heading Base Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-heading-font-size', -1)">—</button>
+                                        <input type="range" id="cfg-heading-font-size" min="12" max="28" value="18" oninput="app.updateTypographyFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-heading-font-size', 1)">+</button>
+                                        <span id="cfg-heading-font-size-val" class="slider-value">18px</span>
+                                    </div>
+                                    <span style="font-size: 0.74rem; color: var(--text-muted); display:block; margin-top:0.3rem;">Adjusts School Name, Address, Class, Subject, Section & Year together proportionally.</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Heading Text Styling</label>
+                                    <div class="form-inline-style">
+                                        <button id="btn-fmt-bold" class="style-btn" onclick="app.toggleFormat('headingBold')">B</button>
+                                        <button id="btn-fmt-italic" class="style-btn" style="font-style:italic;" onclick="app.toggleFormat('headingItalic')">I</button>
+                                        <button id="btn-fmt-underline" class="style-btn" style="text-decoration:underline;" onclick="app.toggleFormat('headingUnderline')">U</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 2: Table Styling -->
+                    <section id="tab-table-style" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">📏 Row Height & Sizing</div>
+                                <div class="form-group">
+                                    <label>Table Row Height</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-row-height', -1)">—</button>
+                                        <input type="range" id="cfg-row-height" min="18" max="55" value="26" oninput="app.updateRowHeightFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-row-height', 1)">+</button>
+                                        <span id="cfg-row-height-val" class="slider-value">26px</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">🎨 Absentee Row Highlighting ('-')</div>
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                                    <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-highlight-absent">Enable Row Highlighting</label>
+                                    <input type="checkbox" id="cfg-highlight-absent" style="width:22px; height:22px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleAbsentHighlight(this.checked)">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Check Absent in Column(s):</label>
+                                    <div id="cfg-absent-cols-container" style="max-height: 140px; overflow-y: auto; background: #0b1120; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem; display: flex; flex-direction: column; gap: 0.45rem;"></div>
+                                </div>
+
+                                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                                    <span style="font-size:0.82rem; color:var(--text-muted); font-weight:600;">Highlight Color:</span>
+                                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                                        <input type="color" id="cfg-absent-highlight-color" value="#fee2e2" style="border:none; width:36px; height:34px; border-radius:6px; cursor:pointer; background:transparent;" onchange="app.updateAbsentHighlightColor(this.value)">
+                                        <input type="text" id="cfg-absent-highlight-color-hex" class="form-control" style="width:100px; font-size:0.82rem; padding:0.25rem 0.5rem; text-align:center; min-height:36px;" value="#fee2e2" onchange="app.updateAbsentHighlightColor(this.value)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">🔤 Table Header & Cell Typography</div>
+                                <div class="form-group">
+                                    <label>Table Header Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-th-font-size', -1)">—</button>
+                                        <input type="range" id="cfg-th-font-size" min="9" max="20" value="13" oninput="app.updateTypographyFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-th-font-size', 1)">+</button>
+                                        <span id="cfg-th-font-size-val" class="slider-value">13px</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Table Header Style</label>
+                                    <div class="form-inline-style">
+                                        <button id="btn-th-bold" class="style-btn" onclick="app.toggleFormat('thBold')">B (Bold)</button>
+                                        <button id="btn-th-italic" class="style-btn" style="font-style:italic;" onclick="app.toggleFormat('thItalic')">I (Italic)</button>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Student Table Cell Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-td-font-size', -1)">—</button>
+                                        <input type="range" id="cfg-td-font-size" min="8" max="18" value="12" oninput="app.updateTypographyFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-td-font-size', 1)">+</button>
+                                        <span id="cfg-td-font-size-val" class="slider-value">12px</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">📊 Individual Column Widths (%)</div>
+                                <div id="col-widths-controls-container"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 3: Page & Layout Settings -->
+                    <section id="tab-page" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">📄 Page Orientation & Numbering</div>
+                                <div class="form-group">
+                                    <label>Page Orientation</label>
+                                    <select id="cfg-orientation" class="form-control" onchange="app.updatePageFromInput()">
+                                        <option value="portrait">Portrait (Vertical A4)</option>
+                                        <option value="landscape">Landscape (Horizontal A4)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Page Number Position</label>
+                                    <select id="cfg-page-number-pos" class="form-control" onchange="app.updatePageFromInput()">
+                                        <option value="bottom-right">Bottom Right</option>
+                                        <option value="bottom-center">Bottom Center</option>
+                                        <option value="bottom-left">Bottom Left</option>
+                                        <option value="top-right">Top Right</option>
+                                        <option value="top-center">Top Center</option>
+                                        <option value="top-left">Top Left</option>
+                                        <option value="none">Hide Page Number</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Page Number Font Size</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-page-number-size', -1)">—</button>
+                                        <input type="range" id="cfg-page-number-size" min="8" max="22" value="10" oninput="app.updatePageFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-page-number-size', 1)">+</button>
+                                        <span id="cfg-page-number-size-val" class="slider-value">10px</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Page Number Style</label>
+                                    <div class="form-inline-style">
+                                        <button id="btn-page-num-bold" class="style-btn" onclick="app.toggleFormat('pageNumberBold')">B (Bold)</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">📐 Page Margins (mm)</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Top</label>
+                                        <input type="number" id="cfg-margin-top" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Bottom</label>
+                                        <input type="number" id="cfg-margin-bottom" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Left</label>
+                                        <input type="number" id="cfg-margin-left" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Right</label>
+                                        <input type="number" id="cfg-margin-right" class="form-control" min="5" max="30" oninput="app.updatePageFromInput()">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">➖ Header Separator Line</div>
+                                <div class="form-group">
+                                    <label>Line Width (%)</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-sep-width', -1)">—</button>
+                                        <input type="range" id="cfg-sep-width" min="20" max="100" value="100" oninput="app.updateSeparatorFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-sep-width', 1)">+</button>
+                                        <span id="cfg-sep-width-val" class="slider-value">100%</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Line Thickness (px)</label>
+                                    <div class="slider-container">
+                                        <button type="button" class="btn-slider btn-slider-dec" title="Decrease" onclick="app.stepSlider('cfg-sep-thickness', -1)">—</button>
+                                        <input type="range" id="cfg-sep-thickness" min="1" max="5" value="1" oninput="app.updateSeparatorFromInput()">
+                                        <button type="button" class="btn-slider btn-slider-inc" title="Increase" onclick="app.stepSlider('cfg-sep-thickness', 1)">+</button>
+                                        <span id="cfg-sep-thickness-val" class="slider-value">1px</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Spacing Above (px)</label>
+                                        <input type="number" id="cfg-sep-sp-top" class="form-control" min="0" max="30" oninput="app.updateSeparatorFromInput()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Spacing Below (px)</label>
+                                        <input type="number" id="cfg-sep-sp-bot" class="form-control" min="0" max="30" oninput="app.updateSeparatorFromInput()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 4: Dynamic Columns & Student Records -->
+                    <section id="tab-marks" class="tab-content active">
+                        <div class="content-container">
+                            <div class="form-card" id="card-mandatory-column-labels">
+                                <div class="form-card-title collapsible-header" id="heading-mandatory-col-labels" onclick="app.toggleMandatoryLabelsCollapse()" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0;" title="Click to unfold / fold Mandatory Column Labels">
+                                    <span>🏷️ Mandatory Column Labels</span>
+                                    <span id="mandatory-labels-chevron" style="font-size: 0.8rem; color: var(--secondary); transition: transform 0.2s ease;">▶</span>
+                                </div>
+                                
+                                <div id="mandatory-labels-body" style="display: none; margin-top: 1rem;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Roll No Heading</label>
+                                            <input type="text" id="cfg-lbl-roll" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Name Heading</label>
+                                            <input type="text" id="cfg-lbl-name" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>No of D Heading</label>
+                                            <input type="text" id="cfg-lbl-noof-d" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Total Heading</label>
+                                            <input type="text" id="cfg-lbl-total" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Grade Heading</label>
+                                            <input type="text" id="cfg-lbl-grade" class="form-control" oninput="app.updateColumnLabelsFromInput()">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <div class="form-card-title" style="margin-bottom:0;">📋 Test / Marks Columns</div>
+                                    <button id="btn-ctrl-add-col" class="btn btn-sm btn-primary" onclick="app.addColumn()">+ Add Column</button>
+                                </div>
+
+                                <div id="columns-list-container"></div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">➕ Add Single Student</div>
+                                <div class="form-row">
+                                    <div class="form-group" style="flex: 0.9;">
+                                        <input type="text" id="new-student-roll" class="form-control" placeholder="Roll No (Unique)" onkeydown="if(event.key==='Enter') app.addNewStudent()">
+                                    </div>
+                                    <div class="form-group" style="flex: 1.4;">
+                                        <input type="text" id="new-student-name" class="form-control" placeholder="Student Full Name" onkeydown="if(event.key==='Enter') app.addNewStudent()">
+                                    </div>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <span style="font-size:0.75rem; color:var(--text-muted);">Students automatically arrange in ascending Roll order.</span>
+                                    <button id="btn-ctrl-add-student" class="btn btn-success" onclick="app.addNewStudent()">+ Add Student</button>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+                                    <div class="form-card-title" style="margin-bottom:0;">👥 Student Roster (<span id="student-count-badge">0</span>)</div>
+                                    <input type="text" id="roster-search-input" class="form-control" style="width:160px; min-height:36px; font-size:0.82rem; padding:0.25rem 0.5rem;" placeholder="🔍 Filter list..." oninput="app.renderRosterManagerList(this.value)">
+                                </div>
+                                <div id="roster-manager-list" style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; background: #0b1120;"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Tab 5: Grading System Settings -->
+                    <section id="tab-grades" class="tab-content">
+                        <div class="content-container">
+                            <div class="form-card">
+                                <div class="form-card-title">⚙️ Grading Options</div>
+                                
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:#0b1120; padding:0.75rem 0.9rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:0.75rem;">
+                                    <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-show-unit-grades">Show Grade for Each Unit Mark</label>
+                                    <input type="checkbox" id="cfg-show-unit-grades" style="width:20px; height:20px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleUnitGrades(this.checked)">
+                                </div>
+
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:#0b1120; padding:0.75rem 0.9rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:0.75rem;">
+                                    <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-show-noof-d">Show "No of D" Column</label>
+                                    <input type="checkbox" id="cfg-show-noof-d" style="width:20px; height:20px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleNoOfD(this.checked)">
+                                </div>
+
+                                <div style="display:flex; align-items:center; justify-content:space-between; background:#0b1120; padding:0.75rem 0.9rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:0.75rem;">
+                                    <div>
+                                        <label style="margin:0; cursor:pointer; font-weight:600; font-size:0.88rem; color:white;" for="cfg-treat-hyphen-d">Treat '-' as Grade "D"</label>
+                                        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.15rem;">Includes absent/hyphen marks in Grade "D" count</div>
+                                    </div>
+                                    <input type="checkbox" id="cfg-treat-hyphen-d" style="width:20px; height:20px; accent-color:var(--secondary); cursor:pointer;" onchange="app.toggleTreatHyphenAsD(this.checked)">
+                                </div>
+
+                                <div class="form-group" style="margin-top:1rem;">
+                                    <label>Calculate Overall Grade Based On</label>
+                                    <select id="cfg-grade-source" class="form-control" onchange="app.updateGradeSourceFromInput()">
+                                        <option value="total">Total Marks</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-card">
+                                <div class="form-card-title">📊 Gradation Scale Editor</div>
+                                
+                                <div style="background:#0b1120; padding:0.65rem; border-radius:8px; border:1px solid var(--border-color); margin-bottom:1rem;">
+                                    <div class="form-inline-style">
+                                        <button type="button" id="btn-grade-cat-total" class="style-btn active" style="font-size:0.85rem;" onclick="app.switchGradeRuleCategory('total')">📊 Total Marks Rules</button>
+                                        <button type="button" id="btn-grade-cat-unit" class="style-btn" style="font-size:0.85rem;" onclick="app.switchGradeRuleCategory('unit')">📝 Unit Marks Rules</button>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                                    <label id="grade-rules-header-title" style="font-weight:700; color:white; font-size:0.9rem;">Total Marks Grading Rules</label>
+                                    <button id="btn-ctrl-add-grade" class="btn btn-sm btn-primary" onclick="app.addGradeRule()">+ Add Grade</button>
+                                </div>
+
+                                <div id="grade-validation-alert" style="display:none; background: rgba(239,68,68,0.2); border: 1px solid var(--accent-red); padding: 0.6rem; border-radius: 8px; font-size: 0.8rem; color: #fca5a5; margin-bottom: 0.75rem;">
+                                    ⚠️ Grade range overlap or invalid min/max numbers detected!
+                                </div>
+
+                                <div style="overflow-x:auto;">
+                                    <table class="rules-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="color:var(--text-muted); font-size:0.78rem;">Grade</th>
+                                                <th style="color:var(--text-muted); font-size:0.78rem;">Min</th>
+                                                <th style="color:var(--text-muted); font-size:0.78rem;">Max</th>
+                                                <th style="width:40px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="grade-rules-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+            </div>
+
+            <div class="panel-resizer" id="panel-resizer" title="Drag border to resize panel width">
+                <button id="panel-lock-btn" class="panel-lock-btn" onclick="app.togglePanelLock()" title="Toggle Panel Resizing Lock State">
+                    <span id="lock-icon">🔓</span>
+                </button>
+                <div class="resizer-handle-line"></div>
+            </div>
+
+            <div class="right-panel" id="right-panel">
+                <section id="tab-preview" class="tab-content active">
+                    <div class="preview-workspace">
+                        <div id="ctrl-preview-zoom-bar" class="preview-toolbar">
+                            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 700;">A4 Preview Zoom:</span>
+                            <button class="btn btn-sm" onclick="app.adjustZoom(-0.1)">−</button>
+                            <span id="zoom-value" style="font-size: 0.9rem; font-weight: 800; width: 50px; text-align: center; color:var(--secondary);">40%</span>
+                            <button class="btn btn-sm" onclick="app.adjustZoom(0.1)">+</button>
+                            <button class="btn btn-sm" onclick="app.resetZoom()">Fit / Reset</button>
+                        </div>
+
+                        <div class="preview-scroll-wrapper">
+                            <div id="a4-pages-container" style="transform-origin: top center; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Mark Entry Modal -->
+    <div id="mark-entry-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-col-title">Unit - I Marks Entry</div>
+                <div style="font-size:0.82rem; color:var(--text-muted); font-weight:600;" id="modal-progress-text">Student 1 of 5</div>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 0.85rem; background: #0b1120; padding: 0.75rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.4rem; flex-wrap:wrap; gap:0.4rem;">
+                        <label style="font-size:0.75rem; color:var(--secondary); font-weight:700; text-transform:uppercase; margin-bottom:0;">⚡ Quick Search & Jump</label>
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:0.35rem; cursor:pointer; user-select:none; margin:0;" title="Toggle automatic keyboard focus cycling">
+                            <input type="checkbox" id="modal-focus-cycle-toggle" tabindex="-1" style="accent-color:var(--secondary); width:16px; height:16px; cursor:pointer;" onchange="app.toggleFocusCycle(this.checked)" checked>
+                            <span style="font-weight:600; color:var(--text-main);">Auto Focus Cycle</span>
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:0.4rem; align-items:center;">
+                        <input type="text" id="modal-search-filter" tabindex="0" class="form-control" style="font-size:0.88rem; padding:0.45rem 0.65rem; flex:1; min-height:42px;" placeholder="🔍 Roll or Name..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" oninput="app.filterModalStudentList(this.value)" onkeydown="app.handleSearchKeyDown(event)">
+                        <select id="modal-student-select" tabindex="-1" class="form-control" style="font-size:0.85rem; padding:0.45rem 0.65rem; flex:1.2; cursor:pointer; min-height:42px;" onchange="app.onStudentSelectChange(this.value)"></select>
+                        <button type="button" id="modal-pick-btn" tabindex="0" class="btn btn-primary btn-sm" style="padding: 0.45rem 0.75rem; font-weight: 700; white-space: nowrap; font-size: 0.85rem; min-height:42px;" onclick="app.pickSelectedModalStudent()" onkeydown="app.handlePickBtnKeyDown(event)">Pick</button>
+                    </div>
+                </div>
+
+                <div class="progress-bar-bg">
+                    <div id="modal-progress-bar" class="progress-bar-fill"></div>
+                </div>
+
+                <div class="student-display-card">
+                    <div id="modal-student-roll" class="student-roll-badge">Roll No: 1</div>
+                    <div style="margin-top: 0.35rem;">
+                        <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:0.25rem; text-transform:uppercase; font-weight:600;">Student Name (Edit Spelling):</label>
+                        <input type="text" id="modal-student-name-input" tabindex="-1" class="form-control" style="text-align:center; font-weight:bold; font-size:1.15rem; color:white; background:#1e293b; min-height:44px;" placeholder="Student Name" oninput="app.onModalNameChange(this.value)">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.35rem;">
+                    <label style="text-align:center; display:block; margin-bottom:0.35rem; font-weight:600;">Enter Marks (or tap Skip for '-')</label>
+                    <input type="number" step="any" inputmode="decimal" enterkeyhint="next" id="modal-marks-input" tabindex="0" class="form-control" style="font-size:1.75rem; text-align:center; font-weight:bold; min-height:56px;" placeholder="0.0" oninput="app.onModalMarkChange(this.value)" onkeydown="app.handleMarksKeyDown(event)">
+                    <div id="modal-live-grade-badge" style="text-align:center; margin-top:0.45rem; font-size:0.88rem; color:var(--secondary); font-weight:700; min-height:22px;"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn" tabindex="-1" onclick="app.modalPrevStudent()">◄ Prev</button>
+                <button class="btn btn-warning" tabindex="-1" onclick="app.modalSkipStudent()">Skip (-)</button>
+                <button id="modal-next-btn" class="btn btn-success" tabindex="0" onclick="app.modalNextStudent()">Next ►</button>
+                <button class="btn btn-danger" tabindex="-1" onclick="app.closeModal('mark-entry-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Storage Manager Modal -->
+    <div id="storage-modal" class="modal-overlay">
+        <div class="modal-card modal-card-lg">
+            <div class="modal-header">
+                <div class="modal-title">🗄️ Local Sheet Storage Manager</div>
+                <button class="btn btn-sm btn-danger" onclick="app.closeModal('storage-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+                    <span style="font-size:0.88rem; color:var(--text-muted);">Saved Local Sheet Snapshots:</span>
+                    <button class="btn btn-success btn-sm" onclick="app.saveCurrentSheetToStorage()">+ Save Current State</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="storage-table">
+                        <thead>
+                            <tr>
+                                <th>Saved Name / Timestamp</th>
+                                <th>Class & Subject</th>
+                                <th>Students</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="storage-list-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Token Setup & Unlock Modal -->
+    <div id="github-auth-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">🔐 GitHub Security Architecture</div>
+                <button class="btn btn-sm btn-danger" onclick="app.closeModal('github-auth-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="github-auth-mode-setup" style="display:none;">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+                        First-Time Setup: Your GitHub Token will be encrypted using <strong>PBKDF2-SHA-256 + AES-256-GCM</strong> with a random salt before being stored in <code>localStorage</code>.
+                    </p>
+                    <div class="form-group">
+                        <label>GitHub Personal Access Token (PAT)</label>
+                        <input type="password" id="gh-setup-token" class="form-control" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Repository Owner / Username</label>
+                        <input type="text" id="gh-setup-owner" class="form-control" placeholder="e.g. username" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Repository Name</label>
+                        <input type="text" id="gh-setup-repo" class="form-control" placeholder="e.g. test-results-data" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Create Security Passphrase</label>
+                        <input type="password" id="gh-setup-passphrase" class="form-control" placeholder="Enter security passphrase" autocomplete="off">
+                    </div>
+                </div>
+
+                <div id="github-auth-mode-unlock" style="display:none;">
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+                        🔒 Enter your Security Passphrase to derive the key and decrypt your token into volatile RAM memory.
+                    </p>
+                    <div class="form-group">
+                        <label>Security Passphrase</label>
+                        <input type="password" id="gh-unlock-passphrase" class="form-control" placeholder="Enter passphrase" autocomplete="off" onkeydown="if(event.key==='Enter') app.submitGitHubUnlock()">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-gh-auth-action" class="btn btn-primary" onclick="app.submitGitHubAuth()">Submit</button>
+                <button id="btn-gh-reset-token" class="btn btn-danger btn-sm" style="display:none;" onclick="app.resetGitHubTokenConfig()">Reset Token Configuration</button>
+                <button class="btn" onclick="app.closeModal('github-auth-modal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Structured JSON Export Modal -->
+    <div id="github-export-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">☁️ Save Structured JSON to GitHub</div>
+                <button class="btn btn-sm btn-danger" onclick="app.closeModal('github-export-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Teacher Short Name</label>
+                    <select id="gh-filename-teacher" class="form-control" onchange="app.updateStructuredFilenamePreview()">
+                        <option value="NM">NM</option>
+                        <option value="PCG">PCG</option>
+                        <option value="BBar">BBar</option>
+                        <option value="BPG">BPG</option>
+                        <option value="DDey(S)">DDey(S)</option>
+                        <option value="Ddey(J)">Ddey(J)</option>
+                        <option value="AS">AS</option>
+                        <option value="CSM">CSM</option>
+                        <option value="GB">GB</option>
+                        <option value="BB">BB</option>
+                        <option value="RKH">RKH</option>
+                        <option value="HM">HM</option>
+                        <option value="DH">DH</option>
+                        <option value="SP">SP</option>
+                        <option value="Debnath">Debnath</option>
+                        <option value="BP">BP</option>
+                        <option value="AM" selected>AM</option>
+                        <option value="CUSTOM">Custom Teacher Name</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="group-custom-teacher" style="display:none;">
+                    <label>Custom Teacher Name</label>
+                    <input type="text" id="gh-filename-custom-teacher" class="form-control" placeholder="Enter short code/name" oninput="app.updateStructuredFilenamePreview()">
+                </div>
+
+                <div class="form-group">
+                    <label>Class Name</label>
+                    <select id="gh-filename-class" class="form-control" onchange="app.updateStructuredFilenamePreview()">
+                        <option value="Class V">Class V</option>
+                        <option value="Class VI">Class VI</option>
+                        <option value="Class VII">Class VII</option>
+                        <option value="Class VIII">Class VIII</option>
+                        <option value="Class IX">Class IX</option>
+                        <option value="Class X">Class X</option>
+                        <option value="Class XI">Class XI</option>
+                        <option value="Class XII">Class XII</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Subject Name</label>
+                    <select id="gh-filename-subject" class="form-control" onchange="app.updateStructuredFilenamePreview()">
+                        <option value="Bengali">Bengali</option>
+                        <option value="English">English</option>
+                        <option value="Mathematics">Mathematics</option>
+                        <option value="Paribesh O Bijnan">Paribesh O Bijnan</option>
+                        <option value="Geography">Geography</option>
+                        <option value="History">History</option>
+                        <option value="Sanskrit">Sanskrit</option>
+                        <option value="Phy Sc">Phy Sc</option>
+                        <option value="Life Sc">Life Sc</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="ENVS">ENVS</option>
+                        <option value="Biology">Biology</option>
+                        <option value="CUSTOM">Custom Subject</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="group-custom-subject" style="display:none;">
+                    <label>Custom Subject Name</label>
+                    <input type="text" id="gh-filename-custom-subject" class="form-control" placeholder="Enter subject name" oninput="app.updateStructuredFilenamePreview()">
+                </div>
+
+                <div class="form-group">
+                    <label>Generated Structured Filename (Auto Timestamped)</label>
+                    <div class="filename-preview-box" id="gh-filename-preview">AM_Class V_Bengali_1st Sep_06_03 PM.json</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="app.executeGitHubSaveWorkflow()">Upload to GitHub</button>
+                <button class="btn" onclick="app.closeModal('github-export-modal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Same-Name Conflict Resolution Modal -->
+    <div id="github-conflict-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">⚠️ File Already Exists on GitHub</div>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.95rem; color:var(--text-main); line-height:1.5;">
+                    A file with the name <strong id="conflict-filename-display" style="color:var(--secondary);">filename.json</strong> already exists on GitHub.
+                </p>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.5rem;">
+                    Do you want to replace the existing file or create a versioned copy (Keep Both)?
+                </p>
+            </div>
+            <div class="modal-footer" style="display:flex; flex-direction:column; gap:0.5rem;">
+                <button class="btn btn-warning" style="width:100%;" onclick="app.resolveConflict('replace')">Replace Existing File</button>
+                <button class="btn btn-success" style="width:100%;" onclick="app.resolveConflict('version')">Keep Both Files (Auto V1.0+)</button>
+                <button class="btn btn-danger" style="width:100%;" onclick="app.resolveConflict('cancel')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Files Sync & Retrieval Modal -->
+    <div id="github-sync-modal" class="modal-overlay">
+        <div class="modal-card modal-card-lg">
+            <div class="modal-header">
+                <div class="modal-title">🔄 GitHub Files Synchronizer & Import</div>
+                <button class="btn btn-sm btn-danger" onclick="app.closeModal('github-sync-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+                    <input type="text" id="gh-search-filter" class="form-control" style="flex:1; min-width:200px;" placeholder="Search JSON files (Teacher, Class, Subject, Date...)..." oninput="app.filterGitHubFilesList(this.value)">
+                    <button class="btn btn-primary" onclick="app.refreshGitHubFilesList()">Fetch / Sync Files</button>
+                </div>
+
+                <div style="max-height:350px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; background:#0b1120;">
+                    <table class="storage-table">
+                        <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th>Size</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gh-files-list-tbody">
+                            <tr>
+                                <td colspan="3" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Click "Fetch / Sync Files" to list repository JSON files.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="app.closeModal('github-sync-modal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings & Visibility Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ Control & Visibility Settings</div>
+                <button class="btn btn-sm btn-danger" onclick="app.closeModal('settings-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section-title">🔒 GitHub Security Architecture</div>
+                <div class="settings-item">
+                    <span class="settings-item-label">Status</span>
+                    <span id="cfg-gh-status-badge" class="github-status-badge locked">🔒 Session Locked</span>
+                </div>
+                <div class="settings-item">
+                    <span class="settings-item-label">Configure / Re-authenticate</span>
+                    <button class="btn btn-sm btn-github" onclick="app.openGitHubAuthModal()">Configure GitHub</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="app.closeModal('settings-modal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- JavaScript Application Engine -->
+    <script>
+        // Module Scope Variable for Plaintext Runtime Token (RAM ONLY)
+        let runtimeToken = null;
+
+        // Cryptographic Utilities via Web Crypto API
+        const SecurityCrypto = {
+            bufToBase64(buf) {
+                let binary = '';
+                const bytes = new Uint8Array(buf);
+                for (let i = 0; i < bytes.byteLength; i++) {
+                    binary += String.fromCharCode(bytes[i]);
+                }
+                return btoa(binary);
+            },
+            base64ToBuf(b64) {
+                const binary = atob(b64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                return bytes.buffer;
+            },
+            async deriveKey(passphrase, saltBuffer, iterations = 100000) {
+                const enc = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey(
+                    "raw",
+                    enc.encode(passphrase),
+                    "PBKDF2",
+                    false,
+                    ["deriveKey"]
+                );
+                return await crypto.subtle.deriveKey(
+                    {
+                        name: "PBKDF2",
+                        salt: saltBuffer,
+                        iterations: iterations,
+                        hash: "SHA-256"
+                    },
+                    keyMaterial,
+                    { name: "AES-GCM", length: 256 },
+                    false,
+                    ["encrypt", "decrypt"]
+                );
+            },
+            async encryptToken(token, passphrase) {
+                const enc = new TextEncoder();
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const iterations = 100000;
+                const key = await this.deriveKey(passphrase, salt, iterations);
+                
+                const ciphertext = await crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    enc.encode(token)
+                );
+                
+                const payload = {
+                    version: 1,
+                    algorithm: "AES-GCM",
+                    kdf: "PBKDF2-SHA-256",
+                    iterations: iterations,
+                    salt: this.bufToBase64(salt),
+                    iv: this.bufToBase64(iv),
+                    ciphertext: this.bufToBase64(ciphertext)
+                };
+                
+                localStorage.setItem("github_secure_token", JSON.stringify(payload));
+                return payload;
+            },
+            async decryptToken(passphrase) {
+                const stored = localStorage.getItem("github_secure_token");
+                if (!stored) throw new Error("No encrypted GitHub Token configuration found.");
+                
+                const payload = JSON.parse(stored);
+                const salt = this.base64ToBuf(payload.salt);
+                const iv = this.base64ToBuf(payload.iv);
+                const ciphertext = this.base64ToBuf(payload.ciphertext);
+                const iterations = payload.iterations || 100000;
+                
+                const key = await this.deriveKey(passphrase, salt, iterations);
+                
+                const decryptedBuffer = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: new Uint8Array(iv) },
+                    key,
+                    ciphertext
+                );
+                
+                const dec = new TextDecoder();
+                return dec.decode(decryptedBuffer);
+            }
+        };
+
+        // Application State Engine
+        const app = {
+            // Sheet Meta & Heading Settings
+            schoolName: "ABC HIGH SCHOOL (H.S.)",
+            schoolAddress: "P.O. - MAIN ROAD, DIST - SAMPLE, WEST BENGAL",
+            className: "Class V",
+            subjectName: "Bengali",
+            sectionName: "A",
+            year: "2026",
+
+            // Typography
+            fontFamily: "'Hind Siliguri', sans-serif",
+            headingFontSize: 18,
+            headingBold: true,
+            headingItalic: false,
+            headingUnderline: false,
+
+            // Table Styling
+            rowHeight: 26,
+            highlightAbsent: true,
+            absentCols: [],
+            absentHighlightColor: "#fee2e2",
+            thFontSize: 13,
+            thBold: true,
+            thItalic: false,
+            tdFontSize: 12,
+            colWidths: {},
+
+            // Page & Layout Settings
+            orientation: "portrait",
+            pageNumberPos: "bottom-right",
+            pageNumberSize: 10,
+            pageNumberBold: true,
+            marginTop: 15,
+            marginBottom: 15,
+            marginLeft: 15,
+            marginRight: 15,
+
+            // Separator Line
+            sepWidth: 100,
+            sepThickness: 1,
+            sepSpTop: 5,
+            sepSpBot: 5,
+
+            // Mandatory Labels
+            mandatoryLabels: {
+                roll: "ROLL NO",
+                name: "STUDENT NAME",
+                noofD: "NO OF D",
+                total: "TOTAL MARKS",
+                grade: "GRADE"
+            },
+
+            // Marks Columns & Student Roster
+            columns: [
+                { id: "col1", name: "1st Unit", maxMarks: 10 },
+                { id: "col2", name: "2nd Unit", maxMarks: 20 },
+                { id: "col3", name: "3rd Unit", maxMarks: 70 }
+            ],
+            students: [
+                { roll: "1", name: "Aarav Sharma", marks: { col1: "9", col2: "18", col3: "64" } },
+                { roll: "2", name: "Ananya Roy", marks: { col1: "8", col2: "15", col3: "58" } },
+                { roll: "3", name: "Bikram Das", marks: { col1: "-", col2: "12", col3: "45" } },
+                { roll: "4", name: "Debolina Mukherjee", marks: { col1: "10", col2: "19", col3: "68" } },
+                { roll: "5", name: "Ishaan Sen", marks: { col1: "7", col2: "14", col3: "50" } }
+            ],
+
+            // Grading System
+            showUnitGrades: true,
+            showNoOfD: true,
+            treatHyphenAsD: true,
+            gradeSource: "total",
+            activeGradeCategory: "total",
+            gradeRulesTotal: [
+                { grade: "A+", min: 90, max: 100 },
+                { grade: "A", min: 80, max: 89 },
+                { grade: "B+", min: 70, max: 79 },
+                { grade: "B", min: 60, max: 69 },
+                { grade: "C+", min: 45, max: 59 },
+                { grade: "C", min: 30, max: 44 },
+                { grade: "D", min: 0, max: 29 }
+            ],
+            gradeRulesUnit: [
+                { grade: "A+", min: 90, max: 100 },
+                { grade: "A", min: 80, max: 89 },
+                { grade: "B+", min: 70, max: 79 },
+                { grade: "B", min: 60, max: 69 },
+                { grade: "C+", min: 45, max: 59 },
+                { grade: "C", min: 30, max: 44 },
+                { grade: "D", min: 0, max: 29 }
+            ],
+
+            // GitHub & System State
+            githubOwner: "",
+            githubRepo: "",
+            githubBranch: "main",
+            pendingUploadPayload: null,
+            zoomLevel: 0.4,
+            isPanelLocked: false,
+
+            // Modal Flow State
+            modalState: {
+                colId: null,
+                currentIndex: 0,
+                autoFocusCycle: true,
+                filteredList: []
+            },
+
+            // App Initialization
+            init() {
+                this.cleanLegacyTokens();
+                this.loadGitHubRepoConfig();
+                this.syncInputsFromState();
+                this.renderColumnsList();
+                this.renderAbsentColsContainer();
+                this.renderRosterManagerList();
+                this.renderGradingTable();
+                this.renderA4Pages();
+                this.updateGitHubStatusUI();
+                this.setupResizer();
+            },
+
+            cleanLegacyTokens() {
+                const legacyKeys = ['githubToken', 'github_token', 'gh_token', 'ghToken', 'gh_unlocked_token', 'token'];
+                legacyKeys.forEach(k => localStorage.removeItem(k));
+            },
+
+            loadGitHubRepoConfig() {
+                try {
+                    const stored = localStorage.getItem('github_repo_config');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        this.githubOwner = parsed.owner || '';
+                        this.githubRepo = parsed.repo || '';
+                        this.githubBranch = parsed.branch || 'main';
+                    }
+                } catch (e) {
+                    console.error("Failed to load repo config", e);
+                }
+            },
+
+            saveGitHubRepoConfig() {
+                localStorage.setItem('github_repo_config', JSON.stringify({
+                    owner: this.githubOwner,
+                    repo: this.githubRepo,
+                    branch: this.githubBranch
+                }));
+            },
+
+            // Toast Popup System
+            showToast(message, type = 'info', title = '') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                let icon = 'ℹ️';
+                if (type === 'success') icon = '✓';
+                if (type === 'error') icon = '✕';
+                if (type === 'warning') icon = '⚠️';
+
+                toast.innerHTML = `
+                    <div style="font-weight:bold; font-size:1.1rem; flex-shrink:0;">${icon}</div>
+                    <div style="flex:1;">
+                        ${title ? `<div style="font-weight:700; font-size:0.85rem; margin-bottom:0.15rem;">${this.escapeHTML(title)}</div>` : ''}
+                        <div>${this.escapeHTML(message)}</div>
+                    </div>
+                `;
+
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(20px)';
+                    toast.style.transition = 'all 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            },
+
+            escapeHTML(str) {
+                if (!str) return '';
+                return String(str).replace(/[&<>"']/g, function(m) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+                });
+            },
+
+            // UI Mode Toggle (Desktop / Mobile)
+            toggleViewMode() {
+                const body = document.body;
+                const icon = document.getElementById('view-mode-icon');
+                const text = document.getElementById('view-mode-text');
+
+                if (body.classList.contains('mode-desktop')) {
+                    body.classList.remove('mode-desktop');
+                    body.classList.add('mode-mobile');
+                    icon.textContent = '📱';
+                    text.textContent = 'Mobile View';
+                } else {
+                    body.classList.remove('mode-mobile');
+                    body.classList.add('mode-desktop');
+                    icon.textContent = '🖥️';
+                    text.textContent = 'Desktop View';
+                }
+                this.renderA4Pages();
+            },
+
+            // Tab Navigation
+            switchTab(tabId, btnElement) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+                if (btnElement) btnElement.classList.add('active');
+                const target = document.getElementById(tabId);
+                if (target) target.classList.add('active');
+
+                // Mobile preview handling
+                const leftPanel = document.getElementById('left-panel');
+                const rightPanel = document.getElementById('right-panel');
+                if (document.body.classList.contains('mode-mobile')) {
+                    if (tabId === 'tab-preview') {
+                        leftPanel.classList.add('preview-active-mobile');
+                        rightPanel.classList.remove('hidden-mobile');
+                    } else {
+                        leftPanel.classList.remove('preview-active-mobile');
+                        rightPanel.classList.add('hidden-mobile');
+                    }
+                }
+                this.renderA4Pages();
+            },
+
+            // Form Inputs Synchronizer
+            syncInputsFromState() {
+                document.getElementById('cfg-school-name').value = this.schoolName;
+                document.getElementById('cfg-school-address').value = this.schoolAddress;
+                document.getElementById('cfg-class-name').value = this.className;
+                document.getElementById('cfg-subject-name').value = this.subjectName;
+                document.getElementById('cfg-section-name').value = this.sectionName;
+                document.getElementById('cfg-year').value = this.year;
+
+                document.getElementById('cfg-font-family').value = this.fontFamily;
+                document.getElementById('cfg-heading-font-size').value = this.headingFontSize;
+                document.getElementById('cfg-heading-font-size-val').textContent = this.headingFontSize + 'px';
+
+                document.getElementById('cfg-row-height').value = this.rowHeight;
+                document.getElementById('cfg-row-height-val').textContent = this.rowHeight + 'px';
+                document.getElementById('cfg-highlight-absent').checked = this.highlightAbsent;
+                document.getElementById('cfg-absent-highlight-color').value = this.absentHighlightColor;
+                document.getElementById('cfg-absent-highlight-color-hex').value = this.absentHighlightColor;
+
+                document.getElementById('cfg-th-font-size').value = this.thFontSize;
+                document.getElementById('cfg-th-font-size-val').textContent = this.thFontSize + 'px';
+                document.getElementById('cfg-td-font-size').value = this.tdFontSize;
+                document.getElementById('cfg-td-font-size-val').textContent = this.tdFontSize + 'px';
+
+                document.getElementById('cfg-orientation').value = this.orientation;
+                document.getElementById('cfg-page-number-pos').value = this.pageNumberPos;
+                document.getElementById('cfg-page-number-size').value = this.pageNumberSize;
+                document.getElementById('cfg-page-number-size-val').textContent = this.pageNumberSize + 'px';
+
+                document.getElementById('cfg-margin-top').value = this.marginTop;
+                document.getElementById('cfg-margin-bottom').value = this.marginBottom;
+                document.getElementById('cfg-margin-left').value = this.marginLeft;
+                document.getElementById('cfg-margin-right').value = this.marginRight;
+
+                document.getElementById('cfg-sep-width').value = this.sepWidth;
+                document.getElementById('cfg-sep-width-val').textContent = this.sepWidth + '%';
+                document.getElementById('cfg-sep-thickness').value = this.sepThickness;
+                document.getElementById('cfg-sep-thickness-val').textContent = this.sepThickness + 'px';
+                document.getElementById('cfg-sep-sp-top').value = this.sepSpTop;
+                document.getElementById('cfg-sep-sp-bot').value = this.sepSpBot;
+
+                document.getElementById('cfg-lbl-roll').value = this.mandatoryLabels.roll;
+                document.getElementById('cfg-lbl-name').value = this.mandatoryLabels.name;
+                document.getElementById('cfg-lbl-noof-d').value = this.mandatoryLabels.noofD;
+                document.getElementById('cfg-lbl-total').value = this.mandatoryLabels.total;
+                document.getElementById('cfg-lbl-grade').value = this.mandatoryLabels.grade;
+
+                document.getElementById('cfg-show-unit-grades').checked = this.showUnitGrades;
+                document.getElementById('cfg-show-noof-d').checked = this.showNoOfD;
+                document.getElementById('cfg-treat-hyphen-d').checked = this.treatHyphenAsD;
+                document.getElementById('cfg-grade-source').value = this.gradeSource;
+
+                this.updateFormatButtons();
+            },
+
+            updateHeadingFromInput() {
+                this.schoolName = document.getElementById('cfg-school-name').value;
+                this.schoolAddress = document.getElementById('cfg-school-address').value;
+                this.className = document.getElementById('cfg-class-name').value;
+                this.subjectName = document.getElementById('cfg-subject-name').value;
+                this.sectionName = document.getElementById('cfg-section-name').value;
+                this.year = document.getElementById('cfg-year').value;
+                this.renderA4Pages();
+            },
+
+            updateTypographyFromInput() {
+                this.fontFamily = document.getElementById('cfg-font-family').value;
+                this.headingFontSize = parseInt(document.getElementById('cfg-heading-font-size').value);
+                document.getElementById('cfg-heading-font-size-val').textContent = this.headingFontSize + 'px';
+
+                this.thFontSize = parseInt(document.getElementById('cfg-th-font-size').value);
+                document.getElementById('cfg-th-font-size-val').textContent = this.thFontSize + 'px';
+
+                this.tdFontSize = parseInt(document.getElementById('cfg-td-font-size').value);
+                document.getElementById('cfg-td-font-size-val').textContent = this.tdFontSize + 'px';
+
+                this.renderA4Pages();
+            },
+
+            updateRowHeightFromInput() {
+                this.rowHeight = parseInt(document.getElementById('cfg-row-height').value);
+                document.getElementById('cfg-row-height-val').textContent = this.rowHeight + 'px';
+                this.renderA4Pages();
+            },
+
+            updatePageFromInput() {
+                this.orientation = document.getElementById('cfg-orientation').value;
+                this.pageNumberPos = document.getElementById('cfg-page-number-pos').value;
+                this.pageNumberSize = parseInt(document.getElementById('cfg-page-number-size').value);
+                document.getElementById('cfg-page-number-size-val').textContent = this.pageNumberSize + 'px';
+
+                this.marginTop = parseInt(document.getElementById('cfg-margin-top').value) || 15;
+                this.marginBottom = parseInt(document.getElementById('cfg-margin-bottom').value) || 15;
+                this.marginLeft = parseInt(document.getElementById('cfg-margin-left').value) || 15;
+                this.marginRight = parseInt(document.getElementById('cfg-margin-right').value) || 15;
+
+                this.renderA4Pages();
+            },
+
+            updateSeparatorFromInput() {
+                this.sepWidth = parseInt(document.getElementById('cfg-sep-width').value);
+                document.getElementById('cfg-sep-width-val').textContent = this.sepWidth + '%';
+
+                this.sepThickness = parseInt(document.getElementById('cfg-sep-thickness').value);
+                document.getElementById('cfg-sep-thickness-val').textContent = this.sepThickness + 'px';
+
+                this.sepSpTop = parseInt(document.getElementById('cfg-sep-sp-top').value) || 0;
+                this.sepSpBot = parseInt(document.getElementById('cfg-sep-sp-bot').value) || 0;
+
+                this.renderA4Pages();
+            },
+
+            updateColumnLabelsFromInput() {
+                this.mandatoryLabels.roll = document.getElementById('cfg-lbl-roll').value;
+                this.mandatoryLabels.name = document.getElementById('cfg-lbl-name').value;
+                this.mandatoryLabels.noofD = document.getElementById('cfg-lbl-noof-d').value;
+                this.mandatoryLabels.total = document.getElementById('cfg-lbl-total').value;
+                this.mandatoryLabels.grade = document.getElementById('cfg-lbl-grade').value;
+                this.renderA4Pages();
+            },
+
+            stepSlider(inputId, step) {
+                const el = document.getElementById(inputId);
+                if (el) {
+                    let val = parseInt(el.value) + step;
+                    if (val >= parseInt(el.min) && val <= parseInt(el.max)) {
+                        el.value = val;
+                        el.dispatchEvent(new Event('input'));
+                    }
+                }
+            },
+
+            toggleFormat(key) {
+                this[key] = !this[key];
+                this.updateFormatButtons();
+                this.renderA4Pages();
+            },
+
+            updateFormatButtons() {
+                document.getElementById('btn-fmt-bold').classList.toggle('active', this.headingBold);
+                document.getElementById('btn-fmt-italic').classList.toggle('active', this.headingItalic);
+                document.getElementById('btn-fmt-underline').classList.toggle('active', this.headingUnderline);
+
+                document.getElementById('btn-th-bold').classList.toggle('active', this.thBold);
+                document.getElementById('btn-th-italic').classList.toggle('active', this.thItalic);
+                document.getElementById('btn-page-num-bold').classList.toggle('active', this.pageNumberBold);
+            },
+
+            toggleMandatoryLabelsCollapse() {
+                const body = document.getElementById('mandatory-labels-body');
+                const chevron = document.getElementById('mandatory-labels-chevron');
+                if (body.style.display === 'none') {
+                    body.style.display = 'block';
+                    chevron.style.transform = 'rotate(90deg)';
+                } else {
+                    body.style.display = 'none';
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+            },
+
+            // Column Management
+            renderColumnsList() {
+                const container = document.getElementById('columns-list-container');
+                container.innerHTML = '';
+
+                this.columns.forEach((col, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'column-item';
+                    item.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:180px;">
+                            <input type="text" class="form-control" style="font-size:0.88rem; padding:0.4rem; min-height:36px;" value="${this.escapeHTML(col.name)}" onchange="app.updateColumnName('${col.id}', this.value)">
+                            <span style="font-size:0.8rem; color:var(--text-muted);">Max:</span>
+                            <input type="number" class="form-control" style="width:65px; font-size:0.88rem; padding:0.4rem; text-align:center; min-height:36px;" value="${col.maxMarks}" onchange="app.updateColumnMaxMarks('${col.id}', this.value)">
+                        </div>
+                        <div style="display:flex; gap:0.3rem;">
+                            <button class="btn btn-sm btn-primary" onclick="app.openMarkEntryModal('${col.id}')">✍️ Marks</button>
+                            <button class="btn btn-sm btn-danger" onclick="app.deleteColumn('${col.id}')">🗑️</button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+                this.renderColWidthsControls();
+            },
+
+            addColumn() {
+                const newId = 'col_' + Date.now();
+                this.columns.push({ id: newId, name: `Unit - ${this.columns.length + 1}`, maxMarks: 10 });
+                this.renderColumnsList();
+                this.renderAbsentColsContainer();
+                this.renderA4Pages();
+            },
+
+            updateColumnName(id, newName) {
+                const col = this.columns.find(c => c.id === id);
+                if (col) {
+                    col.name = newName;
+                    this.renderAbsentColsContainer();
+                    this.renderA4Pages();
+                }
+            },
+
+            updateColumnMaxMarks(id, newMax) {
+                const col = this.columns.find(c => c.id === id);
+                if (col) {
+                    col.maxMarks = parseFloat(newMax) || 10;
+                    this.renderA4Pages();
+                }
+            },
+
+            deleteColumn(id) {
+                if (this.columns.length <= 1) {
+                    this.showToast("At least one marks column is required.", "warning");
+                    return;
+                }
+                this.columns = this.columns.filter(c => c.id !== id);
+                delete this.colWidths[id];
+                this.renderColumnsList();
+                this.renderAbsentColsContainer();
+                this.renderA4Pages();
+            },
+
+            renderColWidthsControls() {
+                const container = document.getElementById('col-widths-controls-container');
+                container.innerHTML = '';
+
+                this.columns.forEach(col => {
+                    const width = this.colWidths[col.id] || '';
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;';
+                    row.innerHTML = `
+                        <span style="font-size:0.85rem; color:var(--text-main); font-weight:600;">${this.escapeHTML(col.name)}</span>
+                        <input type="number" class="form-control" style="width:90px; font-size:0.82rem; padding:0.25rem 0.5rem; text-align:center; min-height:36px;" placeholder="Auto" value="${width}" onchange="app.updateColWidth('${col.id}', this.value)">
+                    `;
+                    container.appendChild(row);
+                });
+            },
+
+            updateColWidth(id, val) {
+                if (!val) {
+                    delete this.colWidths[id];
+                } else {
+                    this.colWidths[id] = parseFloat(val);
+                }
+                this.renderA4Pages();
+            },
+
+            // Absent Highlight Controls
+            toggleAbsentHighlight(val) {
+                this.highlightAbsent = val;
+                this.renderA4Pages();
+            },
+
+            updateAbsentHighlightColor(color) {
+                this.absentHighlightColor = color;
+                document.getElementById('cfg-absent-highlight-color').value = color;
+                document.getElementById('cfg-absent-highlight-color-hex').value = color;
+                this.renderA4Pages();
+            },
+
+            renderAbsentColsContainer() {
+                const container = document.getElementById('cfg-absent-cols-container');
+                container.innerHTML = '';
+                this.columns.forEach(col => {
+                    const isChecked = this.absentCols.includes(col.id);
+                    const lbl = document.createElement('label');
+                    lbl.style.cssText = 'display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.82rem; color:white;';
+                    lbl.innerHTML = `
+                        <input type="checkbox" style="accent-color:var(--secondary); width:16px; height:16px;" ${isChecked ? 'checked' : ''} onchange="app.toggleAbsentCol('${col.id}', this.checked)">
+                        <span>${this.escapeHTML(col.name)}</span>
+                    `;
+                    container.appendChild(lbl);
+                });
+            },
+
+            toggleAbsentCol(colId, checked) {
+                if (checked) {
+                    if (!this.absentCols.includes(colId)) this.absentCols.push(colId);
+                } else {
+                    this.absentCols = this.absentCols.filter(id => id !== colId);
+                }
+                this.renderA4Pages();
+            },
+
+            // Student Roster Management
+            addNewStudent() {
+                const rollInput = document.getElementById('new-student-roll');
+                const nameInput = document.getElementById('new-student-name');
+                const roll = rollInput.value.trim();
+                const name = nameInput.value.trim();
+
+                if (!roll || !name) {
+                    this.showToast("Please enter both Roll No and Student Name.", "warning");
+                    return;
+                }
+
+                if (this.students.some(s => s.roll === roll)) {
+                    this.showToast("Student with this Roll No already exists.", "error");
+                    return;
+                }
+
+                const newStudent = { roll, name, marks: {} };
+                this.columns.forEach(c => newStudent.marks[c.id] = "-");
+
+                this.students.push(newStudent);
+                this.sortStudents();
+                rollInput.value = '';
+                nameInput.value = '';
+                this.renderRosterManagerList();
+                this.renderA4Pages();
+                this.showToast(`Added ${name} (Roll ${roll})`, "success");
+            },
+
+            sortStudents() {
+                this.students.sort((a, b) => {
+                    const numA = parseFloat(a.roll);
+                    const numB = parseFloat(b.roll);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return a.roll.localeCompare(b.roll, undefined, { numeric: true, sensitivity: 'base' });
+                });
+            },
+
+            renderRosterManagerList(filterStr = '') {
+                const container = document.getElementById('roster-manager-list');
+                document.getElementById('student-count-badge').textContent = this.students.length;
+                container.innerHTML = '';
+
+                const filtered = this.students.filter(s => {
+                    if (!filterStr) return true;
+                    const q = filterStr.toLowerCase();
+                    return s.roll.toLowerCase().includes(q) || s.name.toLowerCase().includes(q);
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-muted); font-size:0.85rem;">No student records found.</div>`;
+                    return;
+                }
+
+                filtered.forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'roster-row-item';
+                    item.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0;">
+                            <span class="student-roll-badge" style="margin:0; font-size:0.75rem;">${this.escapeHTML(s.roll)}</span>
+                            <span style="font-weight:600; font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${this.escapeHTML(s.name)}</span>
+                        </div>
+                        <button class="btn btn-sm btn-danger" style="padding:0.2rem 0.5rem;" onclick="app.deleteStudent('${s.roll}')">🗑️</button>
+                    `;
+                    container.appendChild(item);
+                });
+            },
+
+            deleteStudent(roll) {
+                this.students = this.students.filter(s => s.roll !== roll);
+                this.renderRosterManagerList();
+                this.renderA4Pages();
+            },
+
+            // Marks Entry Modal Engine
+            openMarkEntryModal(colId) {
+                const col = this.columns.find(c => c.id === colId);
+                if (!col) return;
+                if (this.students.length === 0) {
+                    this.showToast("Please add at least one student first.", "warning");
+                    return;
+                }
+
+                this.modalState.colId = colId;
+                this.modalState.currentIndex = 0;
+                this.modalState.filteredList = [...this.students];
+
+                document.getElementById('modal-col-title').textContent = `${col.name} Marks Entry`;
+                document.getElementById('modal-focus-cycle-toggle').checked = this.modalState.autoFocusCycle;
+
+                this.populateModalStudentSelect();
+                this.loadModalCurrentStudent();
+                
+                const modal = document.getElementById('mark-entry-modal');
+                modal.classList.add('active');
+                document.body.classList.add('modal-open');
+
+                setTimeout(() => {
+                    const input = document.getElementById('modal-marks-input');
+                    input.focus();
+                    input.select();
+                }, 150);
+            },
+
+            closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) modal.classList.remove('active');
+                if (!document.querySelectorAll('.modal-overlay.active').length) {
+                    document.body.classList.remove('modal-open');
+                }
+            },
+
+            populateModalStudentSelect() {
+                const select = document.getElementById('modal-student-select');
+                select.innerHTML = '';
+                this.modalState.filteredList.forEach((s, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.textContent = `Roll ${s.roll} - ${s.name}`;
+                    select.appendChild(opt);
+                });
+            },
+
+            loadModalCurrentStudent() {
+                const list = this.modalState.filteredList;
+                if (list.length === 0) return;
+                const student = list[this.modalState.currentIndex];
+
+                document.getElementById('modal-progress-text').textContent = `Student ${this.modalState.currentIndex + 1} of ${list.length}`;
+                const pct = ((this.modalState.currentIndex + 1) / list.length) * 100;
+                document.getElementById('modal-progress-bar').style.width = pct + '%';
+
+                document.getElementById('modal-student-roll').textContent = `Roll No: ${student.roll}`;
+                document.getElementById('modal-student-name-input').value = student.name;
+
+                const colId = this.modalState.colId;
+                const markVal = student.marks[colId] !== undefined ? student.marks[colId] : '-';
+                const input = document.getElementById('modal-marks-input');
+                input.value = markVal === '-' ? '' : markVal;
+
+                document.getElementById('modal-student-select').value = this.modalState.currentIndex;
+                this.updateModalLiveGrade(markVal);
+            },
+
+            updateModalLiveGrade(val) {
+                const badge = document.getElementById('modal-live-grade-badge');
+                if (val === '' || val === '-') {
+                    badge.textContent = 'Grade: -';
+                    return;
+                }
+                const num = parseFloat(val);
+                if (isNaN(num)) {
+                    badge.textContent = 'Grade: Invalid';
+                    return;
+                }
+                const col = this.columns.find(c => c.id === this.modalState.colId);
+                const pct = col && col.maxMarks > 0 ? (num / col.maxMarks) * 100 : 0;
+                const grade = this.calculateGrade(pct, 'unit');
+                badge.textContent = `Grade: ${grade} (${pct.toFixed(1)}%)`;
+            },
+
+            onModalMarkChange(val) {
+                this.updateModalLiveGrade(val);
+            },
+
+            onModalNameChange(val) {
+                const student = this.modalState.filteredList[this.modalState.currentIndex];
+                if (student) {
+                    student.name = val;
+                    const orig = this.students.find(s => s.roll === student.roll);
+                    if (orig) orig.name = val;
+                    this.renderRosterManagerList();
+                    this.renderA4Pages();
+                }
+            },
+
+            saveModalCurrentMark(val) {
+                const student = this.modalState.filteredList[this.modalState.currentIndex];
+                if (student) {
+                    const markStr = (val === '' || val === null || val === undefined) ? '-' : val.toString();
+                    student.marks[this.modalState.colId] = markStr;
+                    const orig = this.students.find(s => s.roll === student.roll);
+                    if (orig) orig.marks[this.modalState.colId] = markStr;
+                }
+            },
+
+            modalNextStudent() {
+                const markInput = document.getElementById('modal-marks-input');
+                this.saveModalCurrentMark(markInput.value.trim());
+
+                if (this.modalState.currentIndex < this.modalState.filteredList.length - 1) {
+                    this.modalState.currentIndex++;
+                    this.loadModalCurrentStudent();
+                    if (this.modalState.autoFocusCycle) {
+                        markInput.focus();
+                        markInput.select();
+                    }
+                } else {
+                    this.showToast("Reached end of student list.", "info");
+                    this.renderA4Pages();
+                }
+            },
+
+            modalPrevStudent() {
+                const markInput = document.getElementById('modal-marks-input');
+                this.saveModalCurrentMark(markInput.value.trim());
+
+                if (this.modalState.currentIndex > 0) {
+                    this.modalState.currentIndex--;
+                    this.loadModalCurrentStudent();
+                    if (this.modalState.autoFocusCycle) {
+                        markInput.focus();
+                        markInput.select();
+                    }
+                }
+            },
+
+            modalSkipStudent() {
+                const markInput = document.getElementById('modal-marks-input');
+                markInput.value = '';
+                this.saveModalCurrentMark('-');
+                this.modalNextStudent();
+            },
+
+            toggleFocusCycle(checked) {
+                this.modalState.autoFocusCycle = checked;
+            },
+
+            filterModalStudentList(query) {
+                const q = query.toLowerCase().trim();
+                if (!q) {
+                    this.modalState.filteredList = [...this.students];
+                } else {
+                    this.modalState.filteredList = this.students.filter(s => 
+                        s.roll.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+                    );
+                }
+                this.modalState.currentIndex = 0;
+                this.populateModalStudentSelect();
+                if (this.modalState.filteredList.length > 0) {
+                    this.loadModalCurrentStudent();
+                }
+            },
+
+            handleSearchKeyDown(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.pickSelectedModalStudent();
+                }
+            },
+
+            onStudentSelectChange(val) {
+                this.modalState.currentIndex = parseInt(val);
+                this.loadModalCurrentStudent();
+            },
+
+            pickSelectedModalStudent() {
+                const select = document.getElementById('modal-student-select');
+                if (select.value !== "") {
+                    this.modalState.currentIndex = parseInt(select.value);
+                    this.loadModalCurrentStudent();
+                    const input = document.getElementById('modal-marks-input');
+                    input.focus();
+                    input.select();
+                }
+            },
+
+            handlePickBtnKeyDown(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.pickSelectedModalStudent();
+                }
+            },
+
+            handleMarksKeyDown(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.modalNextStudent();
+                }
+            },
+
+            // Grading System Engine
+            toggleUnitGrades(val) {
+                this.showUnitGrades = val;
+                this.renderA4Pages();
+            },
+
+            toggleNoOfD(val) {
+                this.showNoOfD = val;
+                this.renderA4Pages();
+            },
+
+            toggleTreatHyphenAsD(val) {
+                this.treatHyphenAsD = val;
+                this.renderA4Pages();
+            },
+
+            updateGradeSourceFromInput() {
+                this.gradeSource = document.getElementById('cfg-grade-source').value;
+                this.renderA4Pages();
+            },
+
+            switchGradeRuleCategory(cat) {
+                this.activeGradeCategory = cat;
+                document.getElementById('btn-grade-cat-total').classList.toggle('active', cat === 'total');
+                document.getElementById('btn-grade-cat-unit').classList.toggle('active', cat === 'unit');
+                document.getElementById('grade-rules-header-title').textContent = cat === 'total' ? 'Total Marks Grading Rules' : 'Unit Marks Grading Rules';
+                this.renderGradingTable();
+            },
+
+            renderGradingTable() {
+                const tbody = document.getElementById('grade-rules-tbody');
+                tbody.innerHTML = '';
+                const rules = this.activeGradeCategory === 'total' ? this.gradeRulesTotal : this.gradeRulesUnit;
+
+                rules.forEach((r, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><input type="text" value="${this.escapeHTML(r.grade)}" onchange="app.updateGradeRule(${idx}, 'grade', this.value)"></td>
+                        <td><input type="number" value="${r.min}" onchange="app.updateGradeRule(${idx}, 'min', this.value)"></td>
+                        <td><input type="number" value="${r.max}" onchange="app.updateGradeRule(${idx}, 'max', this.value)"></td>
+                        <td><button class="btn btn-sm btn-danger" style="padding:0.1rem 0.4rem;" onclick="app.deleteGradeRule(${idx})">✕</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            addGradeRule() {
+                const rules = this.activeGradeCategory === 'total' ? this.gradeRulesTotal : this.gradeRulesUnit;
+                rules.push({ grade: "NEW", min: 0, max: 10 });
+                this.renderGradingTable();
+                this.renderA4Pages();
+            },
+
+            updateGradeRule(index, key, value) {
+                const rules = this.activeGradeCategory === 'total' ? this.gradeRulesTotal : this.gradeRulesUnit;
+                if (key === 'grade') rules[index].grade = value;
+                else rules[index][key] = parseFloat(value) || 0;
+                this.renderA4Pages();
+            },
+
+            deleteGradeRule(index) {
+                const rules = this.activeGradeCategory === 'total' ? this.gradeRulesTotal : this.gradeRulesUnit;
+                rules.splice(index, 1);
+                this.renderGradingTable();
+                this.renderA4Pages();
+            },
+
+            calculateGrade(pct, type = 'total') {
+                const rules = type === 'total' ? this.gradeRulesTotal : this.gradeRulesUnit;
+                for (let r of rules) {
+                    if (pct >= r.min && pct <= r.max) {
+                        return r.grade;
+                    }
+                }
+                return '-';
+            },
+
+            // A4 Pagination & PDF Render Engine
+            renderA4Pages() {
+                const container = document.getElementById('a4-pages-container');
+                container.innerHTML = '';
+
+                // Calculate total max marks across columns
+                const totalMaxMarks = this.columns.reduce((sum, c) => sum + (c.maxMarks || 0), 0);
+
+                // Build full dataset with calculated values
+                const processedStudents = this.students.map(student => {
+                    let totalObtained = 0;
+                    let hasAnyMark = false;
+                    let countD = 0;
+
+                    this.columns.forEach(col => {
+                        const m = student.marks[col.id];
+                        if (m !== undefined && m !== '-' && m !== '') {
+                            const num = parseFloat(m);
+                            if (!isNaN(num)) {
+                                totalObtained += num;
+                                hasAnyMark = true;
+                                const colPct = col.maxMarks > 0 ? (num / col.maxMarks) * 100 : 0;
+                                const uGrade = this.calculateGrade(colPct, 'unit');
+                                if (uGrade === 'D') countD++;
+                            }
+                        } else {
+                            if (this.treatHyphenAsD) countD++;
+                        }
+                    });
+
+                    const overallPct = totalMaxMarks > 0 ? (totalObtained / totalMaxMarks) * 100 : 0;
+                    const overallGrade = hasAnyMark ? this.calculateGrade(overallPct, 'total') : '-';
+
+                    return {
+                        ...student,
+                        totalObtained: hasAnyMark ? totalObtained : '-',
+                        overallGrade: overallGrade,
+                        countD: countD
+                    };
+                });
+
+                // Estimate rows per page dynamically based on row height and page orientation
+                const pageHeightMm = this.orientation === 'portrait' ? 297 : 210;
+                const availableHeightPx = (pageHeightMm - this.marginTop - this.marginBottom) * 3.78 - 140; 
+                const rowsPerPage = Math.max(5, Math.floor(availableHeightPx / this.rowHeight));
+
+                const pageCount = Math.ceil(processedStudents.length / rowsPerPage) || 1;
+
+                for (let p = 0; p < pageCount; p++) {
+                    const pageStudents = processedStudents.slice(p * rowsPerPage, (p + 1) * rowsPerPage);
+                    const pageEl = this.createSingleA4Page(p + 1, pageCount, pageStudents);
+                    container.appendChild(pageEl);
+                }
+
+                this.applyZoom();
+            },
+
+            createSingleA4Page(pageNum, totalPages, studentSlice) {
+                const page = document.createElement('div');
+                page.className = `a4-page ${this.orientation}`;
+                page.style.padding = `${this.marginTop}mm ${this.marginRight}mm ${this.marginBottom}mm ${this.marginLeft}mm`;
+                page.style.fontFamily = this.fontFamily;
+
+                let headerHTML = `
+                    <div class="sheet-header" style="font-family: ${this.fontFamily};">
+                        <div class="sheet-year-badge" style="font-size: ${this.headingFontSize * 0.75}px; ${this.headingBold ? 'font-weight:bold;' : ''}">${this.escapeHTML(this.year)}</div>
+                        <div class="sheet-title" style="font-size: ${this.headingFontSize}px; ${this.headingBold ? 'font-weight:bold;' : ''} ${this.headingItalic ? 'font-style:italic;' : ''} ${this.headingUnderline ? 'text-decoration:underline;' : ''}">${this.escapeHTML(this.schoolName)}</div>
+                        <div class="sheet-address" style="font-size: ${this.headingFontSize * 0.75}px; ${this.headingItalic ? 'font-style:italic;' : ''}">${this.escapeHTML(this.schoolAddress)}</div>
+                        <div class="sheet-meta-row" style="font-size: ${this.headingFontSize * 0.8}px; ${this.headingBold ? 'font-weight:bold;' : ''}">
+                            <div>Class: ${this.escapeHTML(this.className)} ${this.sectionName ? `(${this.escapeHTML(this.sectionName)})` : ''}</div>
+                            <div>Subject: ${this.escapeHTML(this.subjectName)}</div>
+                        </div>
+                    </div>
+                    <hr class="sheet-separator" style="width: ${this.sepWidth}%; height: ${this.sepThickness}px; margin-top: ${this.sepSpTop}px; margin-bottom: ${this.sepSpBot}px;">
+                `;
+
+                // Build Table HTML
+                let tableHTML = `
+                    <table class="sheet-table" style="font-size: ${this.tdFontSize}px;">
+                        <thead>
+                            <tr style="height: ${this.rowHeight}px; font-size: ${this.thFontSize}px; ${this.thBold ? 'font-weight:bold;' : ''} ${this.thItalic ? 'font-style:italic;' : ''}">
+                                <th style="width: ${this.colWidths['roll'] || 8}%;">${this.escapeHTML(this.mandatoryLabels.roll)}</th>
+                                <th class="col-name" style="width: ${this.colWidths['name'] || 25}%;">${this.escapeHTML(this.mandatoryLabels.name)}</th>
+                `;
+
+                this.columns.forEach(col => {
+                    const w = this.colWidths[col.id] || '';
+                    tableHTML += `<th style="${w ? `width:${w}%;` : ''}">${this.escapeHTML(col.name)}<br><span style="font-size:0.75em;">(${col.maxMarks})</span></th>`;
+                });
+
+                if (this.showNoOfD) {
+                    tableHTML += `<th style="width: ${this.colWidths['noofD'] || 8}%;">${this.escapeHTML(this.mandatoryLabels.noofD)}</th>`;
+                }
+
+                tableHTML += `<th style="width: ${this.colWidths['total'] || 10}%;">${this.escapeHTML(this.mandatoryLabels.total)}</th>`;
+                tableHTML += `<th style="width: ${this.colWidths['grade'] || 8}%;">${this.escapeHTML(this.mandatoryLabels.grade)}</th>`;
+                tableHTML += `</tr></thead><tbody>`;
+
+                studentSlice.forEach(s => {
+                    let isAbsentHighlighted = false;
+                    if (this.highlightAbsent) {
+                        if (this.absentCols.length > 0) {
+                            isAbsentHighlighted = this.absentCols.some(colId => s.marks[colId] === '-');
+                        } else {
+                            isAbsentHighlighted = this.columns.some(c => s.marks[c.id] === '-');
+                        }
+                    }
+
+                    const rowBg = isAbsentHighlighted ? `background-color: ${this.absentHighlightColor};` : '';
+
+                    tableHTML += `<tr style="height: ${this.rowHeight}px; ${rowBg}">`;
+                    tableHTML += `<td>${this.escapeHTML(s.roll)}</td>`;
+                    tableHTML += `<td class="col-name">${this.escapeHTML(s.name)}</td>`;
+
+                    this.columns.forEach(col => {
+                        const m = s.marks[col.id] !== undefined ? s.marks[col.id] : '-';
+                        let cellContent = this.escapeHTML(m);
+
+                        if (this.showUnitGrades && m !== '-' && m !== '') {
+                            const num = parseFloat(m);
+                            if (!isNaN(num)) {
+                                const colPct = col.maxMarks > 0 ? (num / col.maxMarks) * 100 : 0;
+                                const uGrade = this.calculateGrade(colPct, 'unit');
+                                cellContent += ` <span style="font-size:0.75em; color:#475569;">(${uGrade})</span>`;
+                            }
+                        }
+
+                        tableHTML += `<td>${cellContent}</td>`;
+                    });
+
+                    if (this.showNoOfD) {
+                        tableHTML += `<td>${s.countD}</td>`;
+                    }
+
+                    tableHTML += `<td><strong>${s.totalObtained}</strong></td>`;
+                    tableHTML += `<td><strong>${s.overallGrade}</strong></td>`;
+                    tableHTML += `</tr>`;
+                });
+
+                tableHTML += `</tbody></table>`;
+
+                // Page Number Footer
+                let footerHTML = '';
+                if (this.pageNumberPos !== 'none') {
+                    let posStyle = 'text-align:right;';
+                    if (this.pageNumberPos.includes('center')) posStyle = 'text-align:center;';
+                    if (this.pageNumberPos.includes('left')) posStyle = 'text-align:left;';
+                    const isTop = this.pageNumberPos.includes('top');
+                    const topOrBottom = isTop ? `top: ${this.marginTop}mm;` : `bottom: ${this.marginBottom}mm;`;
+
+                    footerHTML = `
+                        <div style="position:absolute; ${topOrBottom} left:${this.marginLeft}mm; right:${this.marginRight}mm; ${posStyle} font-size:${this.pageNumberSize}px; ${this.pageNumberBold ? 'font-weight:bold;' : ''} color:#475569; pointer-events:none;">
+                            Page ${pageNum} of ${totalPages}
+                        </div>
+                    `;
+                }
+
+                page.innerHTML = headerHTML + tableHTML + footerHTML;
+                return page;
+            },
+
+            // Zoom Controls
+            adjustZoom(delta) {
+                this.zoomLevel = Math.max(0.2, Math.min(1.5, this.zoomLevel + delta));
+                this.applyZoom();
+            },
+
+            resetZoom() {
+                this.zoomLevel = 0.4;
+                this.applyZoom();
+            },
+
+            applyZoom() {
+                const el = document.getElementById('a4-pages-container');
+                const valDisplay = document.getElementById('zoom-value');
+                if (el) el.style.transform = `scale(${this.zoomLevel})`;
+                if (valDisplay) valDisplay.textContent = Math.round(this.zoomLevel * 100) + '%';
+            },
+
+            // Panel Resizer Engine
+            setupResizer() {
+                const resizer = document.getElementById('panel-resizer');
+                const leftPanel = document.getElementById('left-panel');
+                let isDragging = false;
+
+                resizer.addEventListener('mousedown', (e) => {
+                    if (this.isPanelLocked || e.target.closest('.panel-lock-btn')) return;
+                    isDragging = true;
+                    resizer.classList.add('active');
+                    document.body.style.cursor = 'col-resize';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging || this.isPanelLocked) return;
+                    const newWidth = Math.max(280, Math.min(e.clientX, window.innerWidth * 0.75));
+                    leftPanel.style.width = newWidth + 'px';
+                    document.documentElement.style.setProperty('--left-panel-width', newWidth + 'px');
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        resizer.classList.remove('active');
+                        document.body.style.cursor = 'default';
+                        this.renderA4Pages();
+                    }
+                });
+            },
+
+            togglePanelLock() {
+                this.isPanelLocked = !this.isPanelLocked;
+                const btn = document.getElementById('panel-lock-btn');
+                const icon = document.getElementById('lock-icon');
+                const resizer = document.getElementById('panel-resizer');
+
+                if (this.isPanelLocked) {
+                    icon.textContent = '🔒';
+                    resizer.classList.add('locked');
+                    this.showToast("Panel width locked.", "info");
+                } else {
+                    icon.textContent = '🔓';
+                    resizer.classList.remove('locked');
+                    this.showToast("Panel width unlocked.", "info");
+                }
+            },
+
+            // File Local Operations
+            newSheet() {
+                if (confirm("Reset current sheet and create a new sheet? All unsaved changes will be lost.")) {
+                    this.students = [];
+                    this.renderRosterManagerList();
+                    this.renderA4Pages();
+                    this.showToast("New sheet initialized.", "success");
+                }
+            },
+
+            handleExcelUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                        if (jsonData.length < 2) {
+                            this.showToast("Uploaded Excel file is empty or missing headers.", "error");
+                            return;
+                        }
+
+                        const headers = jsonData[0].map(h => String(h || '').trim());
+                        let rollIdx = headers.findIndex(h => /roll/i.test(h));
+                        let nameIdx = headers.findIndex(h => /name/i.test(h));
+
+                        if (rollIdx === -1) rollIdx = 0;
+                        if (nameIdx === -1) nameIdx = 1;
+
+                        const newStudents = [];
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            if (!row || row.length === 0) continue;
+
+                            const roll = String(row[rollIdx] || '').trim();
+                            const name = String(row[nameIdx] || '').trim();
+                            if (roll && name) {
+                                const s = { roll, name, marks: {} };
+                                this.columns.forEach(c => s.marks[c.id] = "-");
+                                newStudents.push(s);
+                            }
+                        }
+
+                        if (newStudents.length > 0) {
+                            this.students = newStudents;
+                            this.sortStudents();
+                            this.renderRosterManagerList();
+                            this.renderA4Pages();
+                            this.showToast(`Imported ${newStudents.length} students from Excel.`, "success", "Excel Upload");
+                        } else {
+                            this.showToast("No valid student records found in Excel file.", "warning");
+                        }
+                    } catch (err) {
+                        this.showToast("Failed to parse Excel file: " + err.message, "error");
+                    }
+                    e.target.value = '';
+                };
+                reader.readAsArrayBuffer(file);
+            },
+
+            downloadSampleExcel() {
+                const sampleData = [
+                    ["ROLL NO", "STUDENT NAME"],
+                    ["1", "Aarav Sharma"],
+                    ["2", "Ananya Roy"],
+                    ["3", "Bikram Das"],
+                    ["4", "Debolina Mukherjee"],
+                    ["5", "Ishaan Sen"]
+                ];
+                const ws = XLSX.utils.aoa_to_sheet(sampleData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Students");
+                XLSX.writeFile(wb, "Student_Roster_Sample.xlsx");
+                this.showToast("Downloaded Sample Excel file.", "info");
+            },
+
+            exportJSON() {
+                const dataStr = JSON.stringify(this.getFullStateObject(), null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${this.className}_${this.subjectName}_Result_Sheet.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast("Local JSON file exported successfully.", "success", "Export JSON");
+            },
+
+            importJSON(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const parsed = JSON.parse(evt.target.result);
+                        this.loadFullStateObject(parsed);
+                        this.showToast("JSON sheet data restored successfully.", "success", "Import JSON");
+                    } catch (err) {
+                        this.showToast("Failed to parse JSON file: " + err.message, "error");
+                    }
+                    e.target.value = '';
+                };
+                reader.readAsText(file);
+            },
+
+            getFullStateObject() {
+                return {
+                    version: "1.0",
+                    timestamp: new Date().toISOString(),
+                    schoolName: this.schoolName,
+                    schoolAddress: this.schoolAddress,
+                    className: this.className,
+                    subjectName: this.subjectName,
+                    sectionName: this.sectionName,
+                    year: this.year,
+                    fontFamily: this.fontFamily,
+                    headingFontSize: this.headingFontSize,
+                    headingBold: this.headingBold,
+                    headingItalic: this.headingItalic,
+                    headingUnderline: this.headingUnderline,
+                    rowHeight: this.rowHeight,
+                    highlightAbsent: this.highlightAbsent,
+                    absentCols: this.absentCols,
+                    absentHighlightColor: this.absentHighlightColor,
+                    thFontSize: this.thFontSize,
+                    thBold: this.thBold,
+                    thItalic: this.thItalic,
+                    tdFontSize: this.tdFontSize,
+                    colWidths: this.colWidths,
+                    orientation: this.orientation,
+                    pageNumberPos: this.pageNumberPos,
+                    pageNumberSize: this.pageNumberSize,
+                    pageNumberBold: this.pageNumberBold,
+                    marginTop: this.marginTop,
+                    marginBottom: this.marginBottom,
+                    marginLeft: this.marginLeft,
+                    marginRight: this.marginRight,
+                    sepWidth: this.sepWidth,
+                    sepThickness: this.sepThickness,
+                    sepSpTop: this.sepSpTop,
+                    sepSpBot: this.sepSpBot,
+                    mandatoryLabels: this.mandatoryLabels,
+                    columns: this.columns,
+                    students: this.students,
+                    showUnitGrades: this.showUnitGrades,
+                    showNoOfD: this.showNoOfD,
+                    treatHyphenAsD: this.treatHyphenAsD,
+                    gradeSource: this.gradeSource,
+                    gradeRulesTotal: this.gradeRulesTotal,
+                    gradeRulesUnit: this.gradeRulesUnit
+                };
+            },
+
+            loadFullStateObject(data) {
+                if (!data) return;
+                this.schoolName = data.schoolName || this.schoolName;
+                this.schoolAddress = data.schoolAddress || this.schoolAddress;
+                this.className = data.className || this.className;
+                this.subjectName = data.subjectName || this.subjectName;
+                this.sectionName = data.sectionName || '';
+                this.year = data.year || this.year;
+                this.fontFamily = data.fontFamily || this.fontFamily;
+                this.headingFontSize = data.headingFontSize || 18;
+                this.headingBold = data.headingBold !== undefined ? data.headingBold : true;
+                this.headingItalic = data.headingItalic || false;
+                this.headingUnderline = data.headingUnderline || false;
+                this.rowHeight = data.rowHeight || 26;
+                this.highlightAbsent = data.highlightAbsent !== undefined ? data.highlightAbsent : true;
+                this.absentCols = data.absentCols || [];
+                this.absentHighlightColor = data.absentHighlightColor || '#fee2e2';
+                this.thFontSize = data.thFontSize || 13;
+                this.thBold = data.thBold !== undefined ? data.thBold : true;
+                this.thItalic = data.thItalic || false;
+                this.tdFontSize = data.tdFontSize || 12;
+                this.colWidths = data.colWidths || {};
+                this.orientation = data.orientation || 'portrait';
+                this.pageNumberPos = data.pageNumberPos || 'bottom-right';
+                this.pageNumberSize = data.pageNumberSize || 10;
+                this.pageNumberBold = data.pageNumberBold !== undefined ? data.pageNumberBold : true;
+                this.marginTop = data.marginTop || 15;
+                this.marginBottom = data.marginBottom || 15;
+                this.marginLeft = data.marginLeft || 15;
+                this.marginRight = data.marginRight || 15;
+                this.sepWidth = data.sepWidth || 100;
+                this.sepThickness = data.sepThickness || 1;
+                this.sepSpTop = data.sepSpTop || 5;
+                this.sepSpBot = data.sepSpBot || 5;
+                this.mandatoryLabels = data.mandatoryLabels || this.mandatoryLabels;
+                this.columns = data.columns || this.columns;
+                this.students = data.students || [];
+                this.showUnitGrades = data.showUnitGrades !== undefined ? data.showUnitGrades : true;
+                this.showNoOfD = data.showNoOfD !== undefined ? data.showNoOfD : true;
+                this.treatHyphenAsD = data.treatHyphenAsD !== undefined ? data.treatHyphenAsD : true;
+                this.gradeSource = data.gradeSource || 'total';
+                this.gradeRulesTotal = data.gradeRulesTotal || this.gradeRulesTotal;
+                this.gradeRulesUnit = data.gradeRulesUnit || this.gradeRulesUnit;
+
+                this.syncInputsFromState();
+                this.renderColumnsList();
+                this.renderAbsentColsContainer();
+                this.renderRosterManagerList();
+                this.renderGradingTable();
+                this.renderA4Pages();
+            },
+
+            // Local Storage Manager
+            openStorageManager() {
+                this.renderStorageList();
+                document.getElementById('storage-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+            },
+
+            saveCurrentSheetToStorage() {
+                const name = prompt("Enter a name/identifier for this sheet snapshot:", `${this.className} - ${this.subjectName}`);
+                if (!name) return;
+
+                const snapshots = JSON.parse(localStorage.getItem('sheet_snapshots') || '[]');
+                snapshots.push({
+                    id: 'snap_' + Date.now(),
+                    name: name,
+                    date: new Date().toLocaleString(),
+                    className: this.className,
+                    subjectName: this.subjectName,
+                    count: this.students.length,
+                    data: this.getFullStateObject()
+                });
+                localStorage.setItem('sheet_snapshots', JSON.stringify(snapshots));
+                this.renderStorageList();
+                this.showToast("Sheet snapshot saved to local storage.", "success");
+            },
+
+            renderStorageList() {
+                const tbody = document.getElementById('storage-list-tbody');
+                tbody.innerHTML = '';
+                const snapshots = JSON.parse(localStorage.getItem('sheet_snapshots') || '[]');
+
+                if (snapshots.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:1rem;">No saved local sheet snapshots found.</td></tr>`;
+                    return;
+                }
+
+                snapshots.forEach((snap, idx) => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${this.escapeHTML(snap.name)}</strong><br><span style="font-size:0.75rem; color:var(--text-muted);">${snap.date}</span></td>
+                        <td>${this.escapeHTML(snap.className)} / ${this.escapeHTML(snap.subjectName)}</td>
+                        <td>${snap.count}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="app.loadStorageSnapshot(${idx})">Load</button>
+                            <button class="btn btn-sm btn-danger" onclick="app.deleteStorageSnapshot(${idx})">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            loadStorageSnapshot(idx) {
+                const snapshots = JSON.parse(localStorage.getItem('sheet_snapshots') || '[]');
+                if (snapshots[idx]) {
+                    this.loadFullStateObject(snapshots[idx].data);
+                    this.closeModal('storage-modal');
+                    this.showToast("Loaded sheet snapshot.", "success");
+                }
+            },
+
+            deleteStorageSnapshot(idx) {
+                const snapshots = JSON.parse(localStorage.getItem('sheet_snapshots') || '[]');
+                snapshots.splice(idx, 1);
+                localStorage.setItem('sheet_snapshots', JSON.stringify(snapshots));
+                this.renderStorageList();
+            },
+
+            // Export to PDF
+            async exportPDF() {
+                const pages = document.querySelectorAll('.a4-page');
+                if (pages.length === 0) return;
+
+                this.showToast("Generating PDF document...", "info");
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const orientation = this.orientation === 'landscape' ? 'l' : 'p';
+                    const pdf = new jsPDF(orientation, 'mm', 'a4');
+
+                    for (let i = 0; i < pages.length; i++) {
+                        if (i > 0) pdf.addPage('a4', orientation);
+
+                        const canvas = await html2canvas(pages[i], {
+                            scale: 2,
+                            useCORS: true,
+                            logging: false
+                        });
+
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                    }
+
+                    pdf.save(`${this.className}_${this.subjectName}_Result_Sheet.pdf`);
+                    this.showToast("PDF Export completed!", "success");
+                } catch (err) {
+                    this.showToast("PDF Export failed: " + err.message, "error");
+                }
+            },
+
+            // =========================================================================
+            // GITHUB SECURITY & CLOUD SYNCHRONIZATION ARCHITECTURE ENGINE
+            // =========================================================================
+
+            updateGitHubStatusUI() {
+                const badge = document.getElementById('cfg-gh-status-badge');
+                const lockIcon = document.getElementById('github-lock-icon');
+                
+                if (runtimeToken) {
+                    if (badge) {
+                        badge.className = 'github-status-badge unlocked';
+                        badge.textContent = '🔓 Session Unlocked (RAM)';
+                    }
+                    if (lockIcon) lockIcon.textContent = '🔓';
+                } else {
+                    if (badge) {
+                        badge.className = 'github-status-badge locked';
+                        badge.textContent = '🔒 Session Locked';
+                    }
+                    if (lockIcon) lockIcon.textContent = '🔒';
+                }
+            },
+
+            lockGitHubSession() {
+                runtimeToken = null;
+                this.updateGitHubStatusUI();
+                this.showToast("GitHub session locked. Token cleared from RAM memory.", "info", "🔒 GitHub Locked");
+            },
+
+            openGitHubAuthModal() {
+                const hasPayload = !!localStorage.getItem('github_secure_token');
+                const setupDiv = document.getElementById('github-auth-mode-setup');
+                const unlockDiv = document.getElementById('github-auth-mode-unlock');
+                const resetBtn = document.getElementById('btn-gh-reset-token');
+                const actionBtn = document.getElementById('btn-gh-auth-action');
+
+                if (hasPayload && !runtimeToken) {
+                    setupDiv.style.display = 'none';
+                    unlockDiv.style.display = 'block';
+                    resetBtn.style.display = 'inline-flex';
+                    actionBtn.textContent = 'Unlock Session';
+                } else if (!hasPayload) {
+                    setupDiv.style.display = 'block';
+                    unlockDiv.style.display = 'none';
+                    resetBtn.style.display = 'none';
+                    actionBtn.textContent = 'Encrypt & Save Credentials';
+                    
+                    document.getElementById('gh-setup-owner').value = this.githubOwner;
+                    document.getElementById('gh-setup-repo').value = this.githubRepo;
+                } else {
+                    setupDiv.style.display = 'block';
+                    unlockDiv.style.display = 'none';
+                    resetBtn.style.display = 'inline-flex';
+                    actionBtn.textContent = 'Update Credentials';
+
+                    document.getElementById('gh-setup-owner').value = this.githubOwner;
+                    document.getElementById('gh-setup-repo').value = this.githubRepo;
+                }
+
+                document.getElementById('github-auth-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+            },
+
+            async submitGitHubAuth() {
+                const hasPayload = !!localStorage.getItem('github_secure_token');
+                if (hasPayload && !runtimeToken && document.getElementById('github-auth-mode-unlock').style.display !== 'none') {
+                    await this.submitGitHubUnlock();
+                } else {
+                    await this.submitGitHubSetup();
+                }
+            },
+
+            async submitGitHubSetup() {
+                const token = document.getElementById('gh-setup-token').value.trim();
+                const owner = document.getElementById('gh-setup-owner').value.trim();
+                const repo = document.getElementById('gh-setup-repo').value.trim();
+                const passphrase = document.getElementById('gh-setup-passphrase').value;
+
+                if (!token || !owner || !repo || !passphrase) {
+                    this.showToast("Please fill in all setup fields.", "warning");
+                    return;
+                }
+
+                try {
+                    await SecurityCrypto.encryptToken(token, passphrase);
+                    runtimeToken = token;
+
+                    this.githubOwner = owner;
+                    this.githubRepo = repo;
+                    this.saveGitHubRepoConfig();
+
+                    // Clean inputs immediately
+                    document.getElementById('gh-setup-token').value = '';
+                    document.getElementById('gh-setup-passphrase').value = '';
+
+                    this.updateGitHubStatusUI();
+                    this.closeModal('github-auth-modal');
+                    this.showToast("GitHub token encrypted with PBKDF2-SHA-256 + AES-256-GCM and stored safely in localStorage.", "success", "✓ Encryption Complete");
+                } catch (err) {
+                    this.showToast("Token setup failed: " + err.message, "error");
+                }
+            },
+
+            async submitGitHubUnlock() {
+                const passphrase = document.getElementById('gh-unlock-passphrase').value;
+                if (!passphrase) {
+                    this.showToast("Please enter your security passphrase.", "warning");
+                    return;
+                }
+
+                try {
+                    const token = await SecurityCrypto.decryptToken(passphrase);
+                    runtimeToken = token;
+                    document.getElementById('gh-unlock-passphrase').value = '';
+
+                    this.updateGitHubStatusUI();
+                    this.closeModal('github-auth-modal');
+                    this.showToast("GitHub session unlocked successfully into volatile RAM memory.", "success", "✓ Session Unlocked");
+
+                    if (this.pendingAuthAction) {
+                        const action = this.pendingAuthAction;
+                        this.pendingAuthAction = null;
+                        action();
+                    }
+                } catch (err) {
+                    document.getElementById('gh-unlock-passphrase').value = '';
+                    this.showToast("Incorrect security passphrase or decryption failed.", "error", "✕ Unlock Failed");
+                }
+            },
+
+            resetGitHubTokenConfig() {
+                if (confirm("Reset GitHub encrypted token payload from localStorage? You will need to re-enter your PAT.")) {
+                    localStorage.removeItem('github_secure_token');
+                    runtimeToken = null;
+                    this.updateGitHubStatusUI();
+                    this.openGitHubAuthModal();
+                    this.showToast("GitHub token configuration cleared.", "info");
+                }
+            },
+
+            ensureGitHubUnlocked(callback) {
+                if (runtimeToken) {
+                    callback();
+                    return;
+                }
+                const hasPayload = !!localStorage.getItem('github_secure_token');
+                if (!hasPayload) {
+                    this.showToast("Please configure your GitHub Token first.", "info");
+                    this.pendingAuthAction = callback;
+                    this.openGitHubAuthModal();
+                } else {
+                    this.pendingAuthAction = callback;
+                    this.openGitHubAuthModal();
+                }
+            },
+
+            // GitHub Structured Filename Generator
+            getOrdinalSuffix(day) {
+                if (day > 3 && day < 21) return 'th';
+                switch (day % 10) {
+                    case 1:  return "st";
+                    case 2:  return "nd";
+                    case 3:  return "rd";
+                    default: return "th";
+                }
+            },
+
+            getFormattedDate(d = new Date()) {
+                const day = d.getDate();
+                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const monthStr = months[d.getMonth()];
+                return `${day}${this.getOrdinalSuffix(day)} ${monthStr}`;
+            },
+
+            getFormattedTime(d = new Date()) {
+                let hours = d.getHours();
+                let minutes = d.getMinutes();
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                const hoursStr = hours < 10 ? '0' + hours : '' + hours;
+                const minsStr = minutes < 10 ? '0' + minutes : '' + minutes;
+                return `${hoursStr}_${minsStr} ${ampm}`;
+            },
+
+            sanitizeFilenameComponent(str) {
+                if (!str) return '';
+                let s = str.replace(/[\/\\:\*\?"<>\|\x00-\x1F]/g, '');
+                s = s.replace(/\.\./g, '');
+                return s.trim();
+            },
+
+            generateStructuredFilename() {
+                let teacherSelect = document.getElementById('gh-filename-teacher').value;
+                if (teacherSelect === 'CUSTOM') {
+                    teacherSelect = document.getElementById('gh-filename-custom-teacher').value.trim() || 'TEACHER';
+                }
+
+                const className = document.getElementById('gh-filename-class').value;
+
+                let subjectSelect = document.getElementById('gh-filename-subject').value;
+                if (subjectSelect === 'CUSTOM') {
+                    subjectSelect = document.getElementById('gh-filename-custom-subject').value.trim() || 'SUBJECT';
+                }
+
+                const teacherSan = this.sanitizeFilenameComponent(teacherSelect);
+                const classSan = this.sanitizeFilenameComponent(className);
+                const subjectSan = this.sanitizeFilenameComponent(subjectSelect);
+
+                const dateStr = this.getFormattedDate();
+                const timeStr = this.getFormattedTime();
+
+                return `${teacherSan}_${classSan}_${subjectSan}_${dateStr}_${timeStr}.json`;
+            },
+
+            updateStructuredFilenamePreview() {
+                const teacherSelect = document.getElementById('gh-filename-teacher').value;
+                const subjectSelect = document.getElementById('gh-filename-subject').value;
+
+                document.getElementById('group-custom-teacher').style.display = teacherSelect === 'CUSTOM' ? 'block' : 'none';
+                document.getElementById('group-custom-subject').style.display = subjectSelect === 'CUSTOM' ? 'block' : 'none';
+
+                const filename = this.generateStructuredFilename();
+                document.getElementById('gh-filename-preview').textContent = filename;
+            },
+
+            openGitHubExportModal() {
+                this.ensureGitHubUnlocked(() => {
+                    this.updateStructuredFilenamePreview();
+                    document.getElementById('github-export-modal').classList.add('active');
+                    document.body.classList.add('modal-open');
+                });
+            },
+
+            // GitHub API Call Driver
+            async githubApiRequest(pathEndpoint, method = 'GET', bodyObj = null) {
+                if (!runtimeToken) {
+                    throw new Error("GitHub session is locked. Please unlock with your passphrase.");
+                }
+                const owner = this.githubOwner;
+                const repo = this.githubRepo;
+                const branch = this.githubBranch || 'main';
+
+                if (!owner || !repo) {
+                    throw new Error("GitHub Repository Owner & Name are not configured.");
+                }
+
+                let url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/`;
+                if (pathEndpoint) {
+                    url += pathEndpoint.split('/').map(encodeURIComponent).join('/');
+                }
+                if (method === 'GET') {
+                    url += `?ref=${encodeURIComponent(branch)}&t=${Date.now()}`;
+                }
+
+                const options = {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${runtimeToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (bodyObj) {
+                    options.body = JSON.stringify(bodyObj);
+                }
+
+                const res = await fetch(url, options);
+                if (res.status === 401) {
+                    runtimeToken = null;
+                    this.updateGitHubStatusUI();
+                    throw new Error("GitHub Authentication Failed: Invalid or expired token.");
+                }
+                
+                if (res.status === 404 && method === 'GET') {
+                    return null; // Not found
+                }
+
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.message || `GitHub API error status ${res.status}`);
+                }
+
+                return await res.json();
+            },
+
+            // GitHub Upload & Conflict Resolution Workflow
+            async executeGitHubSaveWorkflow() {
+                const filename = this.generateStructuredFilename();
+                const contentObj = this.getFullStateObject();
+
+                this.closeModal('github-export-modal');
+                this.showToast(`Checking GitHub repository for ${filename}...`, "info");
+
+                try {
+                    const existingFile = await this.githubApiRequest(filename, 'GET');
+
+                    if (existingFile && existingFile.sha) {
+                        // Conflict detected
+                        this.pendingUploadPayload = {
+                            filename: filename,
+                            baseFilename: filename.replace(/\.json$/i, ''),
+                            contentObj: contentObj,
+                            sha: existingFile.sha
+                        };
+                        document.getElementById('conflict-filename-display').textContent = filename;
+                        document.getElementById('github-conflict-modal').classList.add('active');
+                        document.body.classList.add('modal-open');
+                    } else {
+                        // File does not exist, upload directly
+                        await this.commitUploadToGitHub(filename, contentObj, null);
+                        this.showToast(`File Uploaded Successfully: ${filename}`, "success", "✓ Upload Successful");
+                    }
+                } catch (err) {
+                    this.showToast("GitHub Save operation failed: " + err.message, "error", "✕ Upload Failed");
+                }
+            },
+
+            async resolveConflict(choice) {
+                this.closeModal('github-conflict-modal');
+                if (!this.pendingUploadPayload) return;
+
+                const payload = this.pendingUploadPayload;
+                this.pendingUploadPayload = null;
+
+                if (choice === 'cancel') {
+                    this.showToast("Upload operation cancelled.", "info");
+                    return;
+                }
+
+                if (choice === 'replace') {
+                    try {
+                        await this.commitUploadToGitHub(payload.filename, payload.contentObj, payload.sha);
+                        this.showToast(`File Replaced Successfully: ${payload.filename}`, "success", "✓ File Replaced");
+                    } catch (err) {
+                        this.showToast("Replacement failed: " + err.message, "error", "✕ Replacement Failed");
+                    }
+                } else if (choice === 'version') {
+                    try {
+                        this.showToast("Generating available version tag...", "info");
+                        let versionIndex = 0;
+                        let targetFilename = '';
+                        let available = false;
+
+                        while (!available) {
+                            targetFilename = `${payload.baseFilename} V1.${versionIndex}.json`;
+                            const check = await this.githubApiRequest(targetFilename, 'GET');
+                            if (!check) {
+                                available = true;
+                            } else {
+                                versionIndex++;
+                            }
+                        }
+
+                        await this.commitUploadToGitHub(targetFilename, payload.contentObj, null);
+                        this.showToast(`New Version Uploaded Successfully: ${targetFilename}`, "success", "✓ Version Created");
+                    } catch (err) {
+                        this.showToast("Version creation failed: " + err.message, "error", "✕ Versioning Failed");
+                    }
+                }
+            },
+
+            async commitUploadToGitHub(filename, contentObj, sha = null) {
+                const jsonStr = JSON.stringify(contentObj, null, 2);
+                
+                // Base64 encode UTF-8 string safely
+                const utf8Bytes = new TextEncoder().encode(jsonStr);
+                let binaryStr = '';
+                for (let i = 0; i < utf8Bytes.length; i++) {
+                    binaryStr += String.fromCharCode(utf8Bytes[i]);
+                }
+                const base64Content = btoa(binaryStr);
+
+                const body = {
+                    message: `Save result sheet: ${filename}`,
+                    content: base64Content,
+                    branch: this.githubBranch || 'main'
+                };
+
+                if (sha) {
+                    body.sha = sha;
+                }
+
+                await this.githubApiRequest(filename, 'PUT', body);
+            },
+
+            // GitHub Files Synchronization & Retrieval Engine
+            openGitHubSyncModal() {
+                this.ensureGitHubUnlocked(() => {
+                    document.getElementById('github-sync-modal').classList.add('active');
+                    document.body.classList.add('modal-open');
+                    this.refreshGitHubFilesList();
+                });
+            },
+
+            async refreshGitHubFilesList() {
+                const tbody = document.getElementById('gh-files-list-tbody');
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Fetching files from GitHub...</td></tr>`;
+
+                try {
+                    const files = await this.githubApiRequest('', 'GET');
+                    if (!files || !Array.isArray(files)) {
+                        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:1.5rem;">No files found in repository root.</td></tr>`;
+                        return;
+                    }
+
+                    this.githubFetchedFiles = files.filter(f => f.type === 'file' && f.name.endsWith('.json'));
+                    this.filterGitHubFilesList(document.getElementById('gh-search-filter').value);
+                    this.showToast(`Synchronized ${this.githubFetchedFiles.length} JSON files from GitHub.`, "success", "✓ Synchronization Successful");
+                } catch (err) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--accent-red); padding:1.5rem;">Failed to fetch files: ${this.escapeHTML(err.message)}</td></tr>`;
+                    this.showToast("Synchronization failed: " + err.message, "error", "✕ Sync Failed");
+                }
+            },
+
+            filterGitHubFilesList(query) {
+                const tbody = document.getElementById('gh-files-list-tbody');
+                tbody.innerHTML = '';
+                const files = this.githubFetchedFiles || [];
+
+                const q = (query || '').toLowerCase().trim();
+                const filtered = files.filter(f => !q || f.name.toLowerCase().includes(q));
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:1.5rem;">No matching JSON files found.</td></tr>`;
+                    return;
+                }
+
+                filtered.forEach(f => {
+                    const tr = document.createElement('tr');
+                    const sizeKb = (f.size / 1024).toFixed(1) + ' KB';
+                    tr.innerHTML = `
+                        <td><strong style="color:var(--secondary);">${this.escapeHTML(f.name)}</strong></td>
+                        <td>${sizeKb}</td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="app.retrieveGitHubFile('${this.escapeHTML(f.name)}')">Retrieve & Restore</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            },
+
+            async retrieveGitHubFile(filename) {
+                this.showToast(`Retrieving ${filename} from GitHub...`, "info");
+
+                try {
+                    const fileData = await this.githubApiRequest(filename, 'GET');
+                    if (!fileData || !fileData.content) {
+                        throw new Error("File content empty or unavailable.");
+                    }
+
+                    // Base64 decode UTF-8 string safely
+                    const cleanContent = fileData.content.replace(/\n/g, '');
+                    const binaryStr = atob(cleanContent);
+                    const bytes = new Uint8Array(binaryStr.length);
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        bytes[i] = binaryStr.charCodeAt(i);
+                    }
+                    const jsonStr = new TextDecoder().decode(bytes);
+                    const parsed = JSON.parse(jsonStr);
+
+                    this.loadFullStateObject(parsed);
+                    this.closeModal('github-sync-modal');
+                    this.showToast(`File Retrieved Successfully: ${filename}`, "success", "✓ File Retrieved");
+                } catch (err) {
+                    this.showToast("GitHub File Retrieval failed: " + err.message, "error", "✕ Retrieval Failed");
+                }
+            },
+
+            openSettingsModal() {
+                this.updateGitHubStatusUI();
+                document.getElementById('settings-modal').classList.add('active');
+                document.body.classList.add('modal-open');
+            }
+        };
+
+        // Initialize App on DOM Ready
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
