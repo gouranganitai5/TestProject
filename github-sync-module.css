@@ -1,0 +1,268 @@
+/* GitHub Sync Module Scoped Stylesheet */
+:root {
+  --gh-sync-bg: #0f172a;
+  --gh-sync-surface: #1e293b;
+  --gh-sync-border: #334155;
+  --gh-sync-text: #f8fafc;
+  --gh-sync-text-muted: #94a3b8;
+  --gh-sync-primary: #3b82f6;
+  --gh-sync-primary-hover: #2563eb;
+  --gh-sync-danger: #ef4444;
+  --gh-sync-danger-hover: #dc2626;
+
+  /* State Colors */
+  --gh-color-disconnected: #ef4444;
+  --gh-color-connecting: #f59e0b;
+  --gh-color-connected: #10b981;
+  --gh-color-error: #dc2626;
+  --gh-color-locked: #3b82f6;
+}
+
+/* Floating Status Indicator Badge */
+.gh-sync-badge {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--gh-sync-border);
+  border-radius: 9999px;
+  color: var(--gh-sync-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  z-index: 10000;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.gh-sync-badge:hover {
+  transform: translateY(-2px);
+  border-color: #475569;
+}
+
+/* Animated Glowing Dot */
+.gh-sync-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: relative;
+  transition: background-color 0.3s ease;
+}
+
+/* Indicator Glow Keyframe Animations */
+@keyframes gh-pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes gh-pulse-yellow {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+@keyframes gh-pulse-green {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes gh-pulse-blue {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* Dynamic State Classes */
+.gh-sync-badge[data-state="DISCONNECTED"] .gh-sync-dot {
+  background-color: var(--gh-color-disconnected);
+  animation: gh-pulse-red 2s infinite;
+}
+
+.gh-sync-badge[data-state="CONNECTING"] .gh-sync-dot {
+  background-color: var(--gh-color-connecting);
+  animation: gh-pulse-yellow 1.5s infinite;
+}
+
+.gh-sync-badge[data-state="CONNECTED"] .gh-sync-dot {
+  background-color: var(--gh-color-connected);
+  animation: gh-pulse-green 2.5s infinite;
+}
+
+.gh-sync-badge[data-state="LOCKED"] .gh-sync-dot {
+  background-color: var(--gh-color-locked);
+  animation: gh-pulse-blue 2s infinite;
+}
+
+.gh-sync-badge[data-state="ERROR"] .gh-sync-dot {
+  background-color: var(--gh-color-error);
+  animation: gh-pulse-red 1s infinite;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gh-sync-badge[data-state="ERROR"] .gh-sync-dot::after {
+  content: "✕";
+  font-size: 8px;
+  color: #fff;
+  font-weight: 900;
+}
+
+/* Modal Overlay & Containers */
+.gh-sync-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.gh-sync-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gh-sync-modal {
+  background: var(--gh-sync-surface);
+  border: 1px solid var(--gh-sync-border);
+  border-radius: 14px;
+  padding: 24px;
+  width: 90%;
+  max-width: 440px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+  color: var(--gh-sync-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transform: scale(0.95);
+  transition: transform 0.2s ease-in-out;
+}
+
+.gh-sync-modal-overlay.active .gh-sync-modal {
+  transform: scale(1);
+}
+
+.gh-sync-modal h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gh-sync-modal p {
+  color: var(--gh-sync-text-muted);
+  font-size: 13px;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.gh-sync-form-group {
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.gh-sync-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gh-sync-text-muted);
+  margin-bottom: 6px;
+}
+
+.gh-sync-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  background: #090d16;
+  border: 1px solid var(--gh-sync-border);
+  border-radius: 8px;
+  color: var(--gh-sync-text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gh-sync-input:focus {
+  border-color: var(--gh-sync-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.gh-sync-btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.gh-sync-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.gh-sync-btn-primary {
+  background-color: var(--gh-sync-primary);
+  color: #ffffff;
+}
+
+.gh-sync-btn-primary:hover {
+  background-color: var(--gh-sync-primary-hover);
+}
+
+.gh-sync-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--gh-sync-border);
+  color: var(--gh-sync-text-muted);
+}
+
+.gh-sync-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gh-sync-text);
+}
+
+.gh-sync-btn-danger {
+  background-color: var(--gh-sync-danger);
+  color: #ffffff;
+}
+
+.gh-sync-btn-danger:hover {
+  background-color: var(--gh-sync-danger-hover);
+}
+
+.gh-sync-code-box {
+  background: #090d16;
+  border: 1px dashed var(--gh-sync-border);
+  padding: 10px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  color: #38bdf8;
+  margin: 12px 0;
+}
