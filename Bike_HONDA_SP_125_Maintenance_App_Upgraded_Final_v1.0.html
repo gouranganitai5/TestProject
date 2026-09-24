@@ -1,0 +1,3436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SP125 Care">
+<meta name="description" content="Honda SP125 Bike Maintenance Manager">
+<title>SP125 Care</title>
+<link rel="manifest" href="#" id="manifest-placeholder">
+<style>
+  /* ── FONTS ── */
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  /* ── CSS VARIABLES ── */
+  :root {
+    --bg: #080d1a;
+    --bg2: #0d1426;
+    --bg3: #111c35;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --accent: #ff6b2b;
+    --accent2: #ff9a3c;
+    --blue: #3d9eff;
+    --green: #22d97a;
+    --red: #ff4d6a;
+    --yellow: #ffc947;
+    --purple: #a855f7;
+    --text: #f0f4ff;
+    --text2: #8896b3;
+    --text3: #4a5878;
+    --radius: 18px;
+    --radius-sm: 12px;
+    --shadow: 0 8px 32px rgba(0,0,0,0.5);
+    --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+    --nav-h: 72px;
+    --header-h: 60px;
+
+    /* GitHub Status Colors */
+    --gh-color-disconnected: #ef4444;
+    --gh-color-connecting: #f59e0b;
+    --gh-color-connected: #10b981;
+    --gh-color-error: #dc2626;
+    --gh-color-locked: #3b82f6;
+  }
+  .light {
+    --bg: #f0f4ff;
+    --bg2: #e4eaf8;
+    --bg3: #d8e2f5;
+    --card: rgba(255,255,255,0.7);
+    --card-border: rgba(0,0,50,0.08);
+    --text: #0d1426;
+    --text2: #3a4a68;
+    --text3: #8896b3;
+    --shadow: 0 8px 32px rgba(0,0,80,0.12);
+  }
+
+  /* ── RESET ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background var(--transition), color var(--transition);
+    overscroll-behavior: none;
+  }
+  button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
+  input, textarea, select { font: inherit; color: inherit; background: none; border: none; outline: none; }
+  input::placeholder, textarea::placeholder { color: var(--text3); }
+
+  /* ── APP SHELL ── */
+  #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: relative; }
+
+  /* ── LOADING SCREEN ── */
+  #loader {
+    position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  #loader.hidden { opacity: 0; pointer-events: none; transform: scale(1.05); }
+  .loader-logo {
+    width: 90px; height: 90px; border-radius: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; animation: logoPulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 40px rgba(255,107,43,0.5);
+  }
+  @keyframes logoPulse { 0%,100%{transform:scale(1);box-shadow:0 0 40px rgba(255,107,43,0.5)} 50%{transform:scale(1.06);box-shadow:0 0 60px rgba(255,107,43,0.8)} }
+  .loader-text { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); }
+  .loader-sub { font-size: 13px; color: var(--text2); }
+  .loader-bar { width: 200px; height: 3px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+  .loader-fill { height: 100%; background: linear-gradient(90deg,var(--accent),var(--accent2)); border-radius: 99px; animation: loaderFill 1.8s ease forwards; }
+  @keyframes loaderFill { from{width:0} to{width:100%} }
+
+  /* ── HEADER ── */
+  #header {
+    height: var(--header-h); display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; flex-shrink: 0;
+    background: var(--bg); border-bottom: 1px solid var(--card-border);
+    position: relative; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    transition: var(--transition);
+  }
+  .icon-btn:active { transform: scale(0.92); background: var(--bg3); }
+
+  /* ── GITHUB STATUS BADGE ── */
+  .gh-sync-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; background: var(--card);
+    border: 1px solid var(--card-border); border-radius: 9999px;
+    color: var(--text); font-size: 11px; font-weight: 600;
+    cursor: pointer; user-select: none; transition: var(--transition);
+  }
+  .gh-sync-badge:hover { background: var(--bg3); }
+  .gh-sync-dot { width: 8px; height: 8px; border-radius: 50%; position: relative; transition: background-color 0.3s ease; }
+
+  @keyframes gh-pulse-red { 0%{box-shadow:0 0 0 0 rgba(239,68,68,0.7)} 70%{box-shadow:0 0 0 8px rgba(239,68,68,0)} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} }
+  @keyframes gh-pulse-yellow { 0%{box-shadow:0 0 0 0 rgba(245,158,11,0.7)} 70%{box-shadow:0 0 0 8px rgba(245,158,11,0)} 100%{box-shadow:0 0 0 0 rgba(245,158,11,0)} }
+  @keyframes gh-pulse-green { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7)} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0)} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0)} }
+  @keyframes gh-pulse-blue { 0%{box-shadow:0 0 0 0 rgba(59,130,246,0.7)} 70%{box-shadow:0 0 0 8px rgba(59,130,246,0)} 100%{box-shadow:0 0 0 0 rgba(59,130,246,0)} }
+
+  .gh-sync-badge[data-state="DISCONNECTED"] .gh-sync-dot { background-color: var(--gh-color-disconnected); animation: gh-pulse-red 2s infinite; }
+  .gh-sync-badge[data-state="CONNECTING"] .gh-sync-dot { background-color: var(--gh-color-connecting); animation: gh-pulse-yellow 1.5s infinite; }
+  .gh-sync-badge[data-state="CONNECTED"] .gh-sync-dot { background-color: var(--gh-color-connected); animation: gh-pulse-green 2.5s infinite; }
+  .gh-sync-badge[data-state="LOCKED"] .gh-sync-dot { background-color: var(--gh-color-locked); animation: gh-pulse-blue 2s infinite; }
+  .gh-sync-badge[data-state="ERROR"] .gh-sync-dot { background-color: var(--gh-color-error); animation: gh-pulse-red 1s infinite; display: inline-flex; align-items: center; justify-content: center; }
+  .gh-sync-badge[data-state="ERROR"] .gh-sync-dot::after { content: "✕"; font-size: 7px; color: #fff; font-weight: 900; }
+
+  /* ── PAGES ── */
+  #pages { flex: 1; overflow: hidden; position: relative; }
+  .page {
+    position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+    padding: 16px 16px calc(var(--nav-h) + 16px);
+    opacity: 0; transform: translateX(30px); pointer-events: none;
+    transition: opacity 0.32s ease, transform 0.32s cubic-bezier(0.4,0,0.2,1);
+    -webkit-overflow-scrolling: touch;
+  }
+  .page.active { opacity: 1; transform: translateX(0); pointer-events: all; }
+  .page.exit-left { opacity: 0; transform: translateX(-30px); }
+
+  /* ── BOTTOM NAV ── */
+  #nav {
+    height: var(--nav-h); flex-shrink: 0;
+    background: var(--bg2); border-top: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom);
+    position: relative; z-index: 100;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 4px; transition: var(--transition); position: relative;
+  }
+  .nav-btn .nav-icon { font-size: 22px; transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+  .nav-btn .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); transition: color var(--transition); letter-spacing: 0.3px; }
+  .nav-btn.active .nav-icon { transform: translateY(-3px) scale(1.15); }
+  .nav-btn.active .nav-label { color: var(--accent); }
+  .nav-indicator {
+    position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 3px; background: var(--accent); border-radius: 99px 99px 0 0;
+    transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .nav-btn.active .nav-indicator { width: 24px; }
+  .nav-btn:active .nav-icon { transform: translateY(-3px) scale(1.05); }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 18px; margin-bottom: 14px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    color: var(--text2); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px;
+  }
+
+  /* ── DASHBOARD ── */
+  .hero-card {
+    background: linear-gradient(135deg, #ff6b2b 0%, #ff4500 40%, #c22000 100%);
+    border: none; padding: 22px; position: relative; overflow: hidden;
+  }
+  .hero-card::before {
+    content: ''; position: absolute; right: -30px; top: -30px;
+    width: 180px; height: 180px; border-radius: 50%;
+    background: rgba(255,255,255,0.06); pointer-events: none;
+  }
+  .hero-card::after {
+    content: '🏍️'; position: absolute; right: 16px; bottom: 12px;
+    font-size: 72px; opacity: 0.18; pointer-events: none;
+    transform: scaleX(-1);
+  }
+  .hero-bike { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #fff; }
+  .hero-odo { font-size: 40px; font-weight: 700; color: #fff; line-height: 1; margin: 6px 0; font-family: 'Syne', sans-serif; }
+  .hero-odo span { font-size: 16px; font-weight: 400; opacity: 0.8; }
+  .hero-next { font-size: 13px; color: rgba(255,255,255,0.85); background: rgba(0,0,0,0.2); border-radius: 99px; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; margin-top: 10px; }
+  .hero-edit { position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.15); border-radius: 10px; padding: 6px 12px; font-size: 13px; color: #fff; font-weight: 600; }
+  .hero-edit:active { background: rgba(255,255,255,0.25); }
+
+  .progress-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .prog-card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 14px; text-align: center;
+    transition: var(--transition); backdrop-filter: blur(12px);
+    animation: cardIn 0.4s ease both;
+  }
+  .prog-card:nth-child(2) { animation-delay: 0.05s; }
+  .prog-card:nth-child(3) { animation-delay: 0.1s; }
+  .prog-card:nth-child(4) { animation-delay: 0.15s; }
+  .prog-card:nth-child(5) { animation-delay: 0.2s; }
+  .prog-card:nth-child(6) { animation-delay: 0.25s; }
+  .prog-card:nth-child(7) { animation-delay: 0.3s; }
+  @keyframes cardIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+  .prog-ring { position: relative; width: 64px; height: 64px; margin: 0 auto 10px; }
+  .prog-ring svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+  .prog-ring circle { fill: none; stroke-width: 5; stroke-linecap: round; }
+  .prog-ring .track { stroke: var(--bg3); }
+  .prog-ring .fill { stroke-dasharray: 175.9; stroke-dashoffset: 175.9; transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+  .prog-ring .pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; font-family: 'Syne', sans-serif; }
+  .prog-name { font-size: 12px; font-weight: 600; color: var(--text2); }
+  .prog-due { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .status-ok { color: var(--green); }
+  .status-warn { color: var(--yellow); }
+  .status-bad { color: var(--red); }
+
+  .mark-serviced-btn {
+    margin-top: 10px; width: 100%; padding: 7px 6px; border-radius: 10px;
+    background: var(--card); border: 1px solid var(--card-border);
+    color: var(--accent); font-size: 11px; font-weight: 700;
+    transition: var(--transition);
+  }
+  .mark-serviced-btn:active { transform: scale(0.94); background: var(--bg3); }
+
+  .alert-strip {
+    background: linear-gradient(135deg,rgba(255,76,106,0.15),rgba(255,76,106,0.05));
+    border: 1px solid rgba(255,76,106,0.3); border-radius: var(--radius-sm);
+    padding: 14px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 12px;
+  }
+  .alert-strip .icon { font-size: 22px; }
+  .alert-strip .text { flex: 1; }
+  .alert-strip .title { font-size: 14px; font-weight: 700; color: var(--red); margin-bottom: 4px; }
+  .alert-strip .items { font-size: 13px; color: var(--text2); line-height: 1.8; }
+  .alert-strip.warn { background: linear-gradient(135deg,rgba(255,201,71,0.12),rgba(255,201,71,0.04)); border-color: rgba(255,201,71,0.3); }
+  .alert-strip.warn .title { color: var(--yellow); }
+
+  /* ── CHECKLIST ── */
+  .section-header {
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+    color: var(--accent); margin: 18px 0 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-header .line { flex: 1; height: 1px; background: var(--card-border); }
+  .check-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px; background: var(--card);
+    border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+    margin-bottom: 8px; cursor: pointer; transition: var(--transition);
+    user-select: none; backdrop-filter: blur(8px);
+  }
+  .check-item:active { transform: scale(0.97); }
+  .check-item.checked { background: rgba(34,217,122,0.07); border-color: rgba(34,217,122,0.25); }
+  .check-box {
+    width: 24px; height: 24px; border-radius: 8px; flex-shrink: 0;
+    border: 2px solid var(--text3); display: flex; align-items: center; justify-content: center;
+    transition: var(--transition); font-size: 14px; color: transparent;
+  }
+  .check-item.checked .check-box {
+    background: var(--green); border-color: var(--green); color: #fff;
+    animation: checkBounce 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes checkBounce { 0%{transform:scale(0.5)} 100%{transform:scale(1)} }
+  .check-label { font-size: 14px; font-weight: 500; flex: 1; }
+  .check-item.checked .check-label { text-decoration: line-through; color: var(--text3); }
+  .checklist-progress {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 16px;
+  }
+  .cl-stats { flex: 1; }
+  .cl-count { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+  .cl-label { font-size: 13px; color: var(--text2); }
+  .cl-bar { height: 6px; background: var(--bg3); border-radius: 99px; overflow: hidden; flex: 2; }
+  .cl-fill { height: 100%; background: linear-gradient(90deg,var(--green),#00e5a0); border-radius: 99px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+  .reset-btn {
+    background: rgba(255,76,106,0.15); border: 1px solid rgba(255,76,106,0.3);
+    border-radius: var(--radius-sm); padding: 8px 16px; font-size: 13px; font-weight: 600;
+    color: var(--red); transition: var(--transition);
+  }
+  .reset-btn:active { background: rgba(255,76,106,0.3); transform: scale(0.96); }
+
+  /* ── HISTORY ── */
+  .fab {
+    position: fixed; bottom: calc(var(--nav-h) + 16px); right: 16px;
+    width: 54px; height: 54px; border-radius: 50%;
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    box-shadow: 0 6px 24px rgba(255,107,43,0.5);
+    display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff;
+    z-index: 50; transition: var(--transition);
+    animation: fabIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes fabIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+  .fab:active { transform: scale(0.88); }
+  .search-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px;
+  }
+  .search-bar input { flex: 1; font-size: 14px; }
+  .history-item {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+    padding: 16px; margin-bottom: 10px; cursor: pointer;
+    transition: var(--transition); backdrop-filter: blur(8px);
+    animation: cardIn 0.3s ease both;
+  }
+  .history-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .history-date { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+  .history-cost { font-size: 16px; font-weight: 700; color: var(--accent); font-family: 'Syne', sans-serif; }
+  .history-odo { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .history-work { font-size: 14px; color: var(--text); line-height: 1.5; }
+  .history-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag { background: rgba(61,158,255,0.15); border: 1px solid rgba(61,158,255,0.25); border-radius: 99px; padding: 3px 10px; font-size: 11px; color: var(--blue); font-weight: 600; }
+  .delete-btn { background: rgba(255,76,106,0.15); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--red); font-weight: 600; transition: var(--transition); }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-state .icon { font-size: 56px; margin-bottom: 16px; opacity: 0.5; }
+
+  /* ── EXPENSES ── */
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .stat-box {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 16px; text-align: center;
+    backdrop-filter: blur(8px); animation: cardIn 0.4s ease both;
+  }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--accent); }
+  .stat-lbl { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .parts-list { list-style: none; }
+  .parts-list li {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--card-border); font-size: 14px;
+  }
+  .parts-list li:last-child { border-bottom: none; }
+  .parts-list .cost { color: var(--accent); font-weight: 600; font-family: 'Syne', sans-serif; white-space: nowrap; margin-left: 10px; }
+  .parts-total-spending { font-size: 12px; color: var(--text2); margin: -6px 0 10px; }
+
+  /* ── SETTINGS ── */
+  .setting-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 0; border-bottom: 1px solid var(--card-border); gap: 12px;
+  }
+  .setting-item:last-child { border-bottom: none; }
+  .setting-label { font-size: 15px; font-weight: 500; }
+  .setting-desc { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .toggle { position: relative; width: 50px; height: 28px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0; background: var(--bg3); border-radius: 99px; cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle-thumb {
+    position: absolute; left: 3px; top: 3px; width: 22px; height: 22px;
+    background: #fff; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none;
+  }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(22px); }
+  .setting-action {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 10px 16px; font-size: 14px; font-weight: 600;
+    color: var(--text); transition: var(--transition); white-space: nowrap;
+  }
+  .setting-action:active { transform: scale(0.95); background: var(--bg3); }
+  .setting-action.danger { color: var(--red); background: rgba(255,76,106,0.1); border-color: rgba(255,76,106,0.25); }
+  .odometer-input {
+    background: var(--bg3); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 10px 14px; font-size: 16px;
+    font-weight: 700; font-family: 'Syne', sans-serif; width: 140px; text-align: center;
+    color: var(--text);
+  }
+
+  /* ── MODALS ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500;
+    display: flex; align-items: flex-end; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0;
+    padding: 24px 20px calc(env(safe-area-inset-bottom) + 24px); width: 100%;
+    max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    border-top: 1px solid var(--card-border);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-handle { width: 40px; height: 4px; background: var(--card-border); border-radius: 99px; margin: 0 auto 20px; }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 8px; display: block; text-transform: uppercase; letter-spacing: 0.6px; }
+  .form-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 13px 16px; font-size: 15px; color: var(--text);
+    transition: border-color 0.2s ease;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  textarea.form-input { resize: none; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-primary {
+    width: 100%; background: linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius: var(--radius-sm); padding: 16px; font-size: 16px; font-weight: 700;
+    color: #fff; font-family: 'Syne', sans-serif; transition: var(--transition);
+    box-shadow: 0 6px 20px rgba(255,107,43,0.4); margin-top: 4px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-primary:active { transform: scale(0.96); }
+  .btn-secondary {
+    width: 100%; background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 14px; font-size: 15px; font-weight: 600;
+    color: var(--text); transition: var(--transition); margin-top: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-secondary:active { transform: scale(0.96); }
+
+  .service-context-note {
+    color: var(--text2); font-size: 13px; background: var(--card);
+    border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+    padding: 10px 12px; margin-bottom: 16px;
+  }
+  .part-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .part-row .part-name-input { flex: 2; min-width: 0; }
+  .part-row .part-cost-input { flex: 1; min-width: 0; }
+  .part-remove-btn {
+    width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--card-border);
+    color: var(--red); font-size: 14px; transition: var(--transition);
+  }
+  .part-remove-btn:active { transform: scale(0.9); background: var(--bg3); }
+  .add-part-btn {
+    width: 100%; padding: 10px; font-size: 13px; margin-top: 2px;
+    background: var(--card); border: 1px dashed var(--card-border);
+    border-radius: var(--radius-sm); color: var(--text2); font-weight: 600;
+    transition: var(--transition);
+  }
+  .add-part-btn:active { transform: scale(0.97); background: var(--bg3); }
+  .cost-breakdown {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px; font-size: 13px;
+  }
+  .cb-row { display: flex; justify-content: space-between; padding: 4px 0; color: var(--text2); gap: 10px; }
+  .cb-row.cb-total { font-weight: 700; color: var(--text); border-top: 1px solid var(--card-border); margin-top: 4px; padding-top: 8px; }
+  .cb-warning { margin-top: 8px; color: var(--yellow); font-size: 12px; line-height: 1.5; display: none; }
+
+  .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--card-border); font-size: 14px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--text2); }
+  .detail-val { font-weight: 600; text-align: right; max-width: 60%; }
+
+  /* ── TOAST ── */
+  #toast-container { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 10000; pointer-events: none; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast {
+    background: var(--bg2); border: 1px solid var(--card-border); border-radius: 99px;
+    padding: 10px 20px; font-size: 14px; font-weight: 600; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    backdrop-filter: blur(12px);
+  }
+  .toast.out { animation: toastOut 0.3s ease forwards; }
+  @keyframes toastIn { from{opacity:0;transform:translateY(-12px) scale(0.9)} to{opacity:1;transform:none} }
+  @keyframes toastOut { to{opacity:0;transform:translateY(-12px) scale(0.9)} }
+
+  .divider { height: 1px; background: var(--card-border); margin: 16px 0; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+  .badge-ok { background: rgba(34,217,122,0.15); color: var(--green); }
+  .badge-warn { background: rgba(255,201,71,0.15); color: var(--yellow); }
+  .badge-bad { background: rgba(255,76,106,0.15); color: var(--red); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DEVTOOLS SHIELD ── */
+  #devtools-shield {
+    display: none; position: fixed; inset: 0; z-index: 99999;
+    background: var(--bg);
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    text-align: center; padding: 40px;
+  }
+  #devtools-shield.show { display: flex; }
+  .shield-icon { font-size: 72px; animation: logoPulse 2s ease-in-out infinite; }
+  .shield-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: var(--red); }
+  .shield-msg { font-size: 15px; color: var(--text2); max-width: 300px; line-height: 1.6; }
+  .shield-close { margin-top: 8px; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 12px 28px; font-size: 15px; font-weight: 700; color: var(--text); }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 8000;
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  #auth-screen.hidden { opacity: 0; pointer-events: none; transform: scale(1.04); }
+  #auth-screen::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 20%, rgba(255,107,43,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(61,158,255,0.1) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(168,85,247,0.06) 0%, transparent 70%);
+  }
+  .auth-wrap { width: 100%; max-width: 440px; position: relative; z-index: 1; }
+  .auth-logo { text-align: center; margin-bottom: 24px; animation: authLogoIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes authLogoIn { from{opacity:0;transform:translateY(-20px) scale(0.8)} to{opacity:1;transform:none} }
+  .auth-logo-icon {
+    width: 76px; height: 76px; border-radius: 24px; margin: 0 auto 12px;
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; box-shadow: 0 0 40px rgba(255,107,43,0.4);
+    animation: logoPulse 2s ease-in-out infinite;
+  }
+  .auth-logo-title { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--text); }
+  .auth-logo-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+  .auth-panel {
+    background: var(--bg2); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 26px 22px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .auth-tabs { display: flex; background: var(--bg3); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+  .auth-tab {
+    flex: 1; text-align: center; padding: 10px; border-radius: 9px;
+    font-size: 14px; font-weight: 700; font-family: 'Syne', sans-serif;
+    color: var(--text3); cursor: pointer; transition: all 0.3s ease; user-select: none;
+  }
+  .auth-tab.active {
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    color: #fff; box-shadow: 0 4px 14px rgba(255,107,43,0.35);
+  }
+  .auth-form-group { margin-bottom: 14px; }
+  .auth-label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; display: block; }
+  .auth-input-wrap { position: relative; }
+  .auth-input {
+    width: 100%; background: var(--bg3); border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; color: var(--text);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,107,43,0.15); }
+  .auth-toggle-pw {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; font-size: 16px; color: var(--text3); padding: 4px;
+  }
+  .auth-toggle-pw:hover { color: var(--text); }
+  .auth-btn {
+    width: 100%; background: linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius: var(--radius-sm); padding: 15px; font-size: 15px; font-weight: 700;
+    color: #fff; font-family: 'Syne', sans-serif;
+    box-shadow: 0 6px 20px rgba(255,107,43,0.35);
+    transition: var(--transition); margin-top: 10px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .auth-btn:active { transform: scale(0.97); }
+  .auth-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+  .auth-btn-spinner {
+    width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.35);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite;
+    display: none; flex-shrink: 0;
+  }
+  .auth-btn.loading .auth-btn-spinner { display: inline-block; }
+  .auth-field-err { font-size: 12px; color: var(--red); margin-top: 5px; display: none; }
+  .auth-field-err.show { display: block; }
+  .auth-note {
+    font-size: 11px; color: var(--text3); line-height: 1.6;
+    background: var(--bg3); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 14px;
+  }
+  .logout-icon-btn {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: rgba(255,76,106,0.1); border: 1px solid rgba(255,76,106,0.25);
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    transition: var(--transition); cursor: pointer;
+  }
+  .logout-icon-btn:active { transform: scale(0.92); background: rgba(255,76,106,0.2); }
+
+  /* ── DIALOG OVERLAYS ── */
+  .gh-dialog-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 9500;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .gh-dialog-overlay.open { opacity: 1; pointer-events: all; }
+  .gh-dialog {
+    background: var(--bg2); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 24px; width: 100%; max-width: 440px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto;
+  }
+  .gh-dialog-title { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+  .gh-dialog-sub { font-size: 13px; color: var(--text2); margin-bottom: 18px; line-height: 1.5; }
+  .gh-code-box {
+    background: var(--bg3); border: 1px dashed var(--card-border);
+    padding: 10px; border-radius: 8px; font-family: monospace; font-size: 13px;
+    word-break: break-all; color: var(--blue); margin: 12px 0;
+  }
+
+  /* PWA Install Banner */
+  #install-banner {
+    background: linear-gradient(135deg,rgba(61,158,255,0.15),rgba(61,158,255,0.05));
+    border: 1px solid rgba(61,158,255,0.3); border-radius: var(--radius-sm);
+    padding: 14px 16px; margin-bottom: 14px; display: none;
+    align-items: center; gap: 12px;
+  }
+  #install-banner.show { display: flex; animation: cardIn 0.4s ease both; }
+  .install-text { flex: 1; font-size: 13px; }
+  .install-btn { background: var(--blue); color: #fff; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     AUTH SCREEN (GITHUB LOGIN / SIGNUP)
+══════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🏍️</div>
+      <div class="auth-logo-title">SP125 Care</div>
+      <div class="auth-logo-sub">Honda SP125 · Encrypted GitHub Sync</div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Login with GitHub</div>
+        <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</div>
+      </div>
+
+      <!-- LOGIN WITH GITHUB FORM -->
+      <div id="auth-form-login">
+        <div id="login-unlock-section" style="display:none;margin-bottom:14px">
+          <div style="background:rgba(61,158,255,0.1);border:1px solid rgba(61,158,255,0.25);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:13px;color:var(--text2)">
+            🔐 Saved encrypted profile detected on this device. Enter your Master Passphrase to unlock.
+          </div>
+          <div class="auth-form-group">
+            <label class="auth-label">Master Encryption Passphrase</label>
+            <div class="auth-input-wrap">
+              <input type="password" id="login-unlock-pass" class="auth-input" placeholder="Enter passphrase to unlock" autocomplete="current-password">
+              <button class="auth-toggle-pw" onclick="togglePwVis('login-unlock-pass',this)" type="button">👁</button>
+            </div>
+            <div class="auth-field-err" id="login-unlock-err">Passphrase is required</div>
+          </div>
+          <button class="auth-btn" id="login-unlock-btn" type="button">
+            <div class="auth-btn-spinner"></div>
+            <span class="auth-btn-text">🔓 Unlock & Login</span>
+          </button>
+          <div class="auth-field-err" id="login-unlock-vault-err" style="line-height:1.5;margin-top:10px"></div>
+          <div style="text-align:center;margin-top:12px">
+            <button type="button" onclick="showManualLoginInputs()" style="font-size:12px;color:var(--text3);text-decoration:underline">Use different GitHub credentials</button>
+          </div>
+        </div>
+
+        <div id="login-manual-section">
+          <div class="auth-form-group">
+            <label class="auth-label">GitHub Token (Classic, "gist" scope)</label>
+            <div class="auth-input-wrap">
+              <input type="password" id="login-token" class="auth-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+              <button class="auth-toggle-pw" onclick="togglePwVis('login-token',this)" type="button">👁</button>
+            </div>
+            <div class="auth-field-err" id="login-token-err">Personal Access Token is required</div>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label">Secret Gist ID</label>
+            <input type="text" id="login-gist-id" class="auth-input" placeholder="Gist ID containing your app data" autocomplete="off" spellcheck="false">
+            <div class="auth-field-err" id="login-gist-err">Secret Gist ID is required</div>
+          </div>
+
+          <div class="auth-form-group">
+            <label class="auth-label">Master Encryption Passphrase</label>
+            <div class="auth-input-wrap">
+              <input type="password" id="login-passphrase" class="auth-input" placeholder="Passphrase protecting your data" autocomplete="off">
+              <button class="auth-toggle-pw" onclick="togglePwVis('login-passphrase',this)" type="button">👁</button>
+            </div>
+            <div class="auth-field-err" id="login-pass-err">Passphrase is required</div>
+          </div>
+
+          <button class="auth-btn" id="login-btn" type="button">
+            <div class="auth-btn-spinner"></div>
+            <span class="auth-btn-text">🚀 Login with GitHub</span>
+          </button>
+          <div class="auth-field-err" id="login-vault-err" style="line-height:1.5;margin-top:10px"></div>
+        </div>
+
+        <div class="auth-note">
+          🔒 Zero Plaintext Storage: Credentials encrypted with PBKDF2/AES-256-GCM and stored only in IndexedDB.
+        </div>
+      </div>
+
+      <!-- SIGN UP WITH GITHUB FORM -->
+      <div id="auth-form-signup" style="display:none">
+        <div class="auth-form-group">
+          <label class="auth-label">GitHub Token (Classic, "gist" scope)</label>
+          <div class="auth-input-wrap">
+            <input type="password" id="signup-token" class="auth-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+            <button class="auth-toggle-pw" onclick="togglePwVis('signup-token',this)" type="button">👁</button>
+          </div>
+          <div class="auth-field-err" id="signup-token-err">GitHub token with gist scope required</div>
+        </div>
+
+        <div class="auth-form-group">
+          <label class="auth-label">Secret Gist ID (Optional)</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="signup-gist-id" class="auth-input" placeholder="Leave blank to auto-create" autocomplete="off" spellcheck="false">
+            <button type="button" id="signup-create-gist-btn" class="btn-secondary" style="margin-top:0;width:auto;white-space:nowrap;padding:10px 14px;font-size:12px">Create Gist</button>
+          </div>
+        </div>
+
+        <div class="auth-form-group">
+          <label class="auth-label">Master Encryption Passphrase</label>
+          <div class="auth-input-wrap">
+            <input type="password" id="signup-passphrase" class="auth-input" placeholder="Create strong passphrase (min 8 chars)" autocomplete="new-password">
+            <button class="auth-toggle-pw" onclick="togglePwVis('signup-passphrase',this)" type="button">👁</button>
+          </div>
+          <div class="auth-field-err" id="signup-pass-err">Passphrase must be at least 8 characters</div>
+        </div>
+
+        <button class="auth-btn" id="signup-btn" type="button">
+          <div class="auth-btn-spinner"></div>
+          <span class="auth-btn-text">✨ Create Account & Connect</span>
+        </button>
+        <div class="auth-field-err" id="signup-vault-err" style="line-height:1.5;margin-top:10px"></div>
+
+        <div class="auth-note">
+          🛡️ Your GitHub user identity will be verified directly via GitHub API. An encrypted vault payload is created inside your Secret Gist.
+        </div>
+      </div>
+
+      <!-- Local mode link -->
+      <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--text2)">
+        Want to use without GitHub?
+        <span onclick="continueLocalMode()" style="color:var(--accent);font-weight:700;cursor:pointer"> Continue in Local Mode</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     APP CONTAINER
+══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- LOADER -->
+  <div id="loader">
+    <div class="loader-logo">🏍️</div>
+    <div class="loader-text">SP125 Care</div>
+    <div class="loader-sub">Honda SP125 · Maintenance Manager</div>
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+  </div>
+
+  <!-- DEVTOOLS SHIELD OVERLAY -->
+  <div id="devtools-shield">
+    <div class="shield-icon">🔒</div>
+    <div class="shield-title">Access Restricted</div>
+    <div class="shield-msg">Developer tools detected. Please close DevTools to continue using SP125 Care.</div>
+    <button class="shield-close" onclick="document.getElementById('devtools-shield').classList.remove('show')">Dismiss</button>
+  </div>
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="header-left">
+      <div class="header-title">SP125 Care</div>
+      <!-- Floating / Integrated GitHub Connection Badge -->
+      <div class="gh-sync-badge" id="gh-header-badge" data-state="DISCONNECTED" title="GitHub Sync Status" onclick="handleBadgeClick()">
+        <div class="gh-sync-dot"></div>
+        <span id="gh-badge-label">Disconnected</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="dark-toggle" title="Toggle theme" aria-label="Toggle dark/light mode">☀️</button>
+      <button class="icon-btn" id="notif-btn" title="Alerts" aria-label="Alerts">🔔</button>
+      <button class="logout-icon-btn" id="logout-btn" title="Logout" aria-label="Logout">🚪</button>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div id="pages">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="card hero-card">
+        <div class="hero-bike">Honda SP125</div>
+        <div class="hero-odo" id="dash-odo">32,000 <span>km</span></div>
+        <div id="dash-next" class="hero-next">⏳ Calculating next service…</div>
+        <button class="hero-edit" id="edit-odo-btn">Edit Odo</button>
+      </div>
+
+      <div id="install-banner">
+        <span style="font-size:22px">📲</span>
+        <div class="install-text"><strong>Install App</strong><br>Add to home screen for offline use</div>
+        <button class="install-btn" id="install-btn">Install</button>
+      </div>
+
+      <div id="alerts-container"></div>
+
+      <div class="card" style="padding:16px">
+        <div class="card-title">Maintenance Status</div>
+        <div class="progress-grid" id="progress-grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Quick Stats</div>
+        <div class="stat-row">
+          <div class="stat-box">
+            <div class="stat-val" id="qs-services">0</div>
+            <div class="stat-lbl">Total Services</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="qs-spend">₹0</div>
+            <div class="stat-lbl">Total Spent</div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-box">
+            <div class="stat-val" id="qs-checklist">0%</div>
+            <div class="stat-lbl">Checklist Done</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="qs-last">—</div>
+            <div class="stat-lbl">Last Service</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKLIST -->
+    <div class="page" id="page-checklist">
+      <div class="checklist-progress">
+        <div class="cl-stats">
+          <div class="cl-count" id="cl-count">0/0</div>
+          <div class="cl-label">Items Completed</div>
+        </div>
+        <div class="cl-bar"><div class="cl-fill" id="cl-bar-fill" style="width:0%"></div></div>
+        <button class="reset-btn" id="reset-checklist">Reset</button>
+      </div>
+      <div id="checklist-body"></div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="page" id="page-history">
+      <div class="search-bar">
+        <span>🔍</span>
+        <input type="text" id="history-search" placeholder="Search service records…" autocomplete="off">
+        <button id="clear-search" style="font-size:16px;color:var(--text3)">✕</button>
+      </div>
+      <div id="history-list"></div>
+      <button class="fab" id="fab-add" aria-label="Add service record">+</button>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="page" id="page-expenses">
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="stat-val" id="exp-year">₹0</div>
+          <div class="stat-lbl">This Year</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="exp-total">₹0</div>
+          <div class="stat-lbl">All Time</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box">
+          <div class="stat-val" id="exp-last">₹0</div>
+          <div class="stat-lbl">Last Service</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="exp-avg">₹0</div>
+          <div class="stat-lbl">Avg per Service</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Monthly Spending</div>
+        <div id="expense-chart" style="height:140px;display:flex;align-items:flex-end;gap:6px;padding-top:8px"></div>
+        <div id="expense-chart-labels" style="display:flex;gap:6px;margin-top:6px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Parts Replaced</div>
+        <div class="parts-total-spending" id="parts-total-spending">Total Parts Spending: ₹0</div>
+        <ul class="parts-list" id="parts-list"><li style="color:var(--text3);font-size:13px">No parts recorded yet</li></ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Expense Breakdown</div>
+        <div id="expense-breakdown"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="card">
+        <div class="card-title">Bike Info</div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Current Odometer</div>
+            <div class="setting-desc">Update to calculate next service</div>
+          </div>
+          <input type="number" id="odo-setting" class="odometer-input" min="0" max="999999" placeholder="km">
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn-primary" id="save-odo-btn">Save Odometer</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Appearance</div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Dark Mode</div>
+            <div class="setting-desc">Use dark background theme</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="dark-mode-toggle" checked>
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Maintenance Intervals</div>
+        <div class="setting-item">
+          <div><div class="setting-label">Engine Oil</div><div class="setting-desc">Every 3,000 km</div></div>
+          <span class="badge badge-ok">3000 km</span>
+        </div>
+        <div class="setting-item">
+          <div><div class="setting-label">Chain Lube</div><div class="setting-desc">Every 600 km</div></div>
+          <span class="badge badge-ok">600 km</span>
+        </div>
+        <div class="setting-item">
+          <div><div class="setting-label">Air Filter</div><div class="setting-desc">Every 6,000 km</div></div>
+          <span class="badge badge-warn">6000 km</span>
+        </div>
+        <div class="setting-item">
+          <div><div class="setting-label">Fork Oil</div><div class="setting-desc">Every 20,000 km</div></div>
+          <span class="badge badge-warn">20000 km</span>
+        </div>
+        <div class="setting-item">
+          <div><div class="setting-label">Brake Fluid</div><div class="setting-desc">Every 2 years</div></div>
+          <span class="badge badge-bad">2 years</span>
+        </div>
+      </div>
+
+      <!-- GITHUB ENCRYPTED CLOUD SYNC CARD -->
+      <div class="card" id="github-sync-card">
+        <div class="card-title">🐙 GitHub Encrypted Cloud Sync</div>
+
+        <div id="gh-account-badge" style="display:flex;align-items:center;gap:10px;background:rgba(61,158,255,0.1);border:1px solid rgba(61,158,255,0.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px">
+          <div style="font-size:24px">👤</div>
+          <div style="flex:1">
+            <div id="gh-account-name" style="font-weight:700;font-size:14px">Local User</div>
+            <div id="gh-account-sub" style="font-size:11px;color:var(--text2)">Not connected to GitHub</div>
+          </div>
+          <button id="gh-profile-btn" class="setting-action" style="font-size:12px;padding:6px 12px">Manage</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <button class="btn-primary" id="gh-upload-btn" style="margin-top:0;padding:12px">
+            <span>☁️</span><span>Upload Sync</span>
+          </button>
+          <button class="btn-secondary" id="gh-download-btn" style="margin-top:0;padding:12px">
+            <span>⬇️</span><span>Download Sync</span>
+          </button>
+        </div>
+
+        <div id="gh-sync-status-bar" style="margin-top:8px;font-size:12px;color:var(--text3);min-height:18px;text-align:center">Ready</div>
+
+        <div style="margin-top:12px;font-size:11px;color:var(--text3);line-height:1.7;border-top:1px solid var(--card-border);padding-top:10px">
+          <strong style="color:var(--text2)">GitHub Security Architecture:</strong><br>
+          • <b>Zero Plaintext Cloud Storage:</b> All data AES-256-GCM encrypted client-side.<br>
+          • <b>Append or Replace:</b> Explicitly choose merge or overwrite before sync operations.<br>
+          • <b>Volatile Session:</b> Master keys exist in volatile RAM and scrub on disconnect.
+        </div>
+      </div>
+
+      <!-- LOCAL BACKUP CARD -->
+      <div class="card">
+        <div class="card-title">Local Data Management</div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Export Local JSON</div>
+            <div class="setting-desc">Save offline backup file</div>
+          </div>
+          <button class="setting-action" id="export-btn">Export</button>
+        </div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label">Import Local JSON</div>
+            <div class="setting-desc">Restore from offline JSON backup</div>
+          </div>
+          <button class="setting-action" id="import-btn">Import</button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+        </div>
+        <div class="divider"></div>
+        <div class="setting-item">
+          <div>
+            <div class="setting-label" style="color:var(--red)">Reset Local Data</div>
+            <div class="setting-desc">Delete locally cached maintenance entries</div>
+          </div>
+          <button class="setting-action danger" id="reset-all-btn">Reset</button>
+        </div>
+      </div>
+
+      <div style="text-align:center;padding:20px 0;color:var(--text3);font-size:12px">
+        SP125 Care v2.0 · Honda SP125 · Encrypted GitHub Sync
+      </div>
+    </div>
+
+  </div><!-- /pages -->
+
+  <!-- BOTTOM NAV -->
+  <nav id="nav">
+    <button class="nav-btn active" data-page="dashboard">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Dashboard</div>
+      <div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" data-page="checklist">
+      <div class="nav-icon">✅</div>
+      <div class="nav-label">Checklist</div>
+      <div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" data-page="history">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">History</div>
+      <div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" data-page="expenses">
+      <div class="nav-icon">💰</div>
+      <div class="nav-label">Expenses</div>
+      <div class="nav-indicator"></div>
+    </button>
+    <button class="nav-btn" data-page="settings">
+      <div class="nav-icon">⚙️</div>
+      <div class="nav-label">Settings</div>
+      <div class="nav-indicator"></div>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- ADD SERVICE MODAL -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-add-title">Add Service Record</div>
+    <div class="service-context-note" id="service-context-note" style="display:none"></div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-input" id="form-date">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Odometer (km)</label>
+        <input type="number" class="form-input" id="form-odo" placeholder="32000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cost (₹)</label>
+        <input type="number" inputmode="decimal" class="form-input" id="form-cost" placeholder="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Work Done</label>
+      <textarea class="form-input" id="form-work" rows="3" placeholder="Engine oil changed, chain lubed…"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Parts &amp; Individual Costs (optional)</label>
+      <div id="parts-rows"></div>
+      <button type="button" class="add-part-btn" id="add-part-btn">+ Add Part</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Labour / Service Charge (₹)</label>
+        <input type="number" inputmode="decimal" class="form-input" id="form-labour" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Other Charges (₹)</label>
+        <input type="number" inputmode="decimal" class="form-input" id="form-other" placeholder="0">
+      </div>
+    </div>
+    <div class="cost-breakdown" id="cost-breakdown">
+      <div class="cb-row"><span>Parts Total</span><span id="cb-parts">₹0</span></div>
+      <div class="cb-row"><span>Labour / Service</span><span id="cb-labour">₹0</span></div>
+      <div class="cb-row"><span>Other Charges</span><span id="cb-other">₹0</span></div>
+      <div class="cb-row cb-total"><span>Calculated Breakdown</span><span id="cb-breakdown-total">₹0</span></div>
+      <div class="cb-row cb-total"><span>Total Service Cost</span><span id="cb-service-total">₹0</span></div>
+      <div class="cb-warning" id="cb-warning"></div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Mechanic / Shop</label>
+      <input type="text" class="form-input" id="form-mechanic" placeholder="Honda service center">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-input" id="form-notes" rows="2" placeholder="Any additional notes…"></textarea>
+    </div>
+    <button class="btn-primary" id="save-service-btn">Save Service Record</button>
+    <button class="btn-secondary" id="cancel-add-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- DETAIL VIEW MODAL -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detail-title">Service Details</div>
+    <div id="detail-content"></div>
+    <button class="btn-secondary" id="close-detail-btn">Close</button>
+  </div>
+</div>
+
+<!-- EDIT ODO MODAL -->
+<div class="modal-overlay" id="modal-odo">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Update Odometer</div>
+    <div class="form-group">
+      <label class="form-label">Current Reading (km)</label>
+      <input type="number" class="form-input" id="modal-odo-input" placeholder="32000" style="font-size:24px;font-weight:700;font-family:'Syne',sans-serif;text-align:center">
+    </div>
+    <button class="btn-primary" id="save-odo-modal-btn">Update</button>
+    <button class="btn-secondary" id="cancel-odo-btn">Cancel</button>
+  </div>
+</div>
+
+<!-- GITHUB CHOICE DIALOG (APPEND / REPLACE) -->
+<div class="gh-dialog-overlay" id="gh-choice-dialog">
+  <div class="gh-dialog">
+    <div class="gh-dialog-title" id="gh-choice-title">Cloud Sync Option</div>
+    <div class="gh-dialog-sub" id="gh-choice-desc">Choose how you want to synchronize records with your encrypted Secret Gist.</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-primary" id="gh-choice-append-btn" type="button">➕ Append (Merge New Records)</button>
+      <button class="btn-secondary" id="gh-choice-replace-btn" type="button" style="border-color:var(--accent);color:var(--accent)">🔄 Replace / Overwrite</button>
+      <button class="btn-secondary" id="gh-choice-cancel-btn" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- GITHUB NEW GIST ONE-TIME MODAL -->
+<div class="gh-dialog-overlay" id="gh-new-gist-modal">
+  <div class="gh-dialog">
+    <div class="gh-dialog-title">Secret Gist Created!</div>
+    <div class="gh-dialog-sub">Your new encrypted vault has been created on GitHub. Save this Gist ID in a safe place:</div>
+    <div class="gh-code-box" id="gh-new-gist-id-box"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-secondary" id="gh-copy-gist-btn" type="button">📋 Copy ID</button>
+      <button class="btn-primary" id="gh-confirm-gist-btn" type="button">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- GITHUB MANAGE PROFILE MODAL -->
+<div class="gh-dialog-overlay" id="gh-manage-modal">
+  <div class="gh-dialog">
+    <div class="gh-dialog-title">GitHub Sync Session</div>
+    <div class="gh-dialog-sub">Manage your active GitHub encrypted connection session.</div>
+    <div id="gh-session-details" style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn-secondary" id="gh-reconnect-btn" type="button">🔄 Re-verify Connection</button>
+      <button class="btn-secondary" id="gh-disconnect-btn" type="button">🔒 Disconnect (Purge RAM)</button>
+      <button class="btn-secondary" id="gh-purge-cred-btn" type="button" style="color:var(--red);border-color:rgba(255,77,106,0.3)">🗑 Reset Stored GitHub Credentials</button>
+      <button class="btn-secondary" id="gh-close-manage-btn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   APPLICATION LOCAL DATA & STORAGE
+═══════════════════════════════════════════ */
+const STORAGE_KEY = 'sp125_data';
+const DEFAULT_DATA = {
+  odometer: 32000,
+  darkMode: true,
+  checklist: {},
+  history: [],
+  lastOilChange: 32000,
+  lastChainLube: 32000,
+  lastAirFilter: 32000,
+  lastForkOil: 30000,
+  // Independent baselines (see MAINT_ITEMS / migrateMaintenanceData for backward-compat migration)
+  lastBrakeService: 32000,
+  lastTyreService: 32000,
+  lastBatteryService: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  lastBrakeFluidDate: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  // Snapshot of baseline values captured once, used to safely recalculate
+  // maintenance state if all matching history records are deleted.
+  maintenanceSeed: null,
+};
+
+let appData = {};
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    appData = raw ? { ...DEFAULT_DATA, ...JSON.parse(raw) } : { ...DEFAULT_DATA };
+  } catch { appData = { ...DEFAULT_DATA }; }
+  if (migrateMaintenanceData()) saveData();
+}
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); } catch(e) {}
+}
+function resetData() {
+  appData = { ...DEFAULT_DATA };
+  saveData();
+}
+
+/* ════════════════════════════════════════════
+   BACKWARD-COMPATIBLE MAINTENANCE MIGRATION
+   Safe to run repeatedly (idempotent). Never destroys existing
+   values; only fills in fields that are genuinely missing.
+═══════════════════════════════════════════ */
+function migrateMaintenanceData() {
+  let changed = false;
+
+  // Older saved data may not have independent Brake/Tyre/Battery baselines
+  // (previously they incorrectly shared lastChainLube / lastBrakeFluidDate).
+  // Seed them from whatever value they were effectively using before, so
+  // existing progress doesn't suddenly jump.
+  if (appData.lastBrakeService === undefined) {
+    appData.lastBrakeService = appData.lastChainLube ?? DEFAULT_DATA.lastBrakeService;
+    changed = true;
+  }
+  if (appData.lastTyreService === undefined) {
+    appData.lastTyreService = appData.lastChainLube ?? DEFAULT_DATA.lastTyreService;
+    changed = true;
+  }
+  if (appData.lastBatteryService === undefined) {
+    appData.lastBatteryService = appData.lastBrakeFluidDate ?? DEFAULT_DATA.lastBatteryService;
+    changed = true;
+  }
+
+  if (!appData.maintenanceSeed) {
+    appData.maintenanceSeed = {
+      oil: appData.lastOilChange,
+      air: appData.lastAirFilter,
+      chain: appData.lastChainLube,
+      fork: appData.lastForkOil,
+      brake: appData.lastBrakeService,
+      tyres: appData.lastTyreService,
+      battery: appData.lastBatteryService,
+      brakefluid: appData.lastBrakeFluidDate,
+    };
+    changed = true;
+  }
+
+  // Backfill new per-record fields on legacy history entries.
+  (appData.history || []).forEach(h => {
+    if (!Array.isArray(h.parts)) { h.parts = []; changed = true; }
+    if (h.labourCost === undefined) { h.labourCost = 0; changed = true; }
+    if (h.otherCost === undefined) { h.otherCost = 0; changed = true; }
+    if (!Array.isArray(h.maintenanceActions)) {
+      // Infer, but do not silently assign cost — this is display/recalc metadata only.
+      h.maintenanceActions = Array.from(detectMaintenanceKeys(h.work || ''));
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
+/* ════════════════════════════════════════════
+   CHECKLIST & SERVICE DEFINITIONS
+═══════════════════════════════════════════ */
+const CHECKLIST = [
+  { section: '🔧 Engine & Performance', items: [
+    { id: 'oil', label: 'Change engine oil' },
+    { id: 'spark', label: 'Spark plug inspect / replace' },
+    { id: 'throttle', label: 'Throttle body clean' },
+    { id: 'idle', label: 'Idle RPM check' },
+    { id: 'noise', label: 'Engine noise check' },
+  ]},
+  { section: '💨 Air & Fuel', items: [
+    { id: 'airfilter', label: 'Air filter clean / replace' },
+    { id: 'fuel_line', label: 'Fuel line check' },
+  ]},
+  { section: '⛓️ Chain & Drive', items: [
+    { id: 'chain_clean', label: 'Chain clean' },
+    { id: 'chain_lube', label: 'Chain lubricate' },
+    { id: 'chain_adj', label: 'Chain adjust' },
+    { id: 'sprocket', label: 'Chain sprocket inspect' },
+  ]},
+  { section: '🛑 Brakes', items: [
+    { id: 'brake_front', label: 'Front brake pads check' },
+    { id: 'brake_rear', label: 'Rear brake check' },
+    { id: 'brake_fluid', label: 'Brake fluid check' },
+    { id: 'brake_adj', label: 'Brake adjustment' },
+  ]},
+  { section: '🔩 Suspension', items: [
+    { id: 'fork_oil', label: 'Fork oil change' },
+    { id: 'fork_seal', label: 'Fork seal leakage check' },
+    { id: 'rear_shock', label: 'Rear shock absorber inspect' },
+    { id: 'steering', label: 'Steering cone set check' },
+  ]},
+  { section: '🛞 Tyres & Wheels', items: [
+    { id: 'tyre_pres', label: 'Tyre pressure check' },
+    { id: 'tread', label: 'Tread check' },
+    { id: 'wheel_bear', label: 'Wheel bearing inspect' },
+  ]},
+  { section: '⚡ Electrical', items: [
+    { id: 'battery', label: 'Battery test' },
+    { id: 'self_start', label: 'Self start check' },
+    { id: 'lights', label: 'Lights check' },
+    { id: 'horn', label: 'Horn check' },
+  ]},
+  { section: '🎛️ Controls', items: [
+    { id: 'clutch', label: 'Clutch adjust' },
+    { id: 'throttle_free', label: 'Throttle free play' },
+    { id: 'gear', label: 'Gear shifter check' },
+  ]},
+];
+
+const ALL_ITEMS = CHECKLIST.flatMap(s => s.items);
+
+const MAINT_ITEMS = [
+  { key: 'oil', label: 'Engine Oil', emoji: '🛢️', interval: 3000, type: 'km', lastKey: 'lastOilChange', color: '#ff6b2b' },
+  { key: 'air', label: 'Air Filter', emoji: '💨', interval: 6000, type: 'km', lastKey: 'lastAirFilter', color: '#3d9eff' },
+  { key: 'chain', label: 'Chain', emoji: '⛓️', interval: 600, type: 'km', lastKey: 'lastChainLube', color: '#ffc947' },
+  { key: 'brake', label: 'Brakes', emoji: '🛑', interval: 3000, type: 'km', lastKey: 'lastBrakeService', color: '#ff4d6a' },
+  { key: 'fork', label: 'Fork Oil', emoji: '🔩', interval: 20000, type: 'km', lastKey: 'lastForkOil', color: '#a855f7' },
+  { key: 'battery', label: 'Battery', emoji: '⚡', interval: 730, type: 'days', lastKey: 'lastBatteryService', color: '#22d97a' },
+  { key: 'tyres', label: 'Tyres', emoji: '🛞', interval: 1000, type: 'km', lastKey: 'lastTyreService', color: '#2dd4bf' },
+];
+
+// Maintenance items PLUS the standalone "Brake Fluid" date-based check used
+// by getAlerts (it has no progress card, but does have its own baseline).
+const MAINT_RESET_TARGETS = [
+  ...MAINT_ITEMS.map(i => ({ key: i.key, type: i.type, field: i.lastKey })),
+  { key: 'brakefluid', type: 'days', field: 'lastBrakeFluidDate' },
+];
+
+/* ── PRECISE MAINTENANCE KEYWORD DETECTION ──
+   Avoids the old bug where generic w.includes('oil') would match
+   "Oil Filter" or "Fork Oil" and incorrectly reset Engine Oil. */
+function detectMaintenanceKeys(work) {
+  const w = (work || '').toLowerCase();
+  const keys = new Set();
+  if (!w) return keys;
+
+  const hasForkOil = /\bfork\s*oil\b/.test(w);
+  const hasOilFilter = /\boil\s*filter\b/.test(w);
+  const hasBrakeFluid = /\bbrake\s*fluid\b/.test(w);
+
+  let hasEngineOil =
+    /\bengine\s*oil\b/.test(w) ||
+    /\boil\s*change\b/.test(w) ||
+    /\bchange\s*(the\s*)?engine\s*oil\b/.test(w);
+  if (!hasEngineOil && /\boil\b/.test(w) && !hasForkOil && !hasOilFilter) hasEngineOil = true;
+
+  if (hasEngineOil) keys.add('oil');
+  if (hasForkOil) keys.add('fork');
+
+  // \blubricat\w* covers lubricate / lubricated / lubrication / lubricating
+  const hasLubricate = /\blubricat\w*/.test(w);
+  if (
+    /\bchain\s*lube\b/.test(w) ||
+    (/\bchain\b/.test(w) && hasLubricate) ||
+    (hasLubricate && !hasBrakeFluid)
+  ) keys.add('chain');
+
+  if (/\bair\s*filter\b/.test(w)) keys.add('air');
+
+  if (hasBrakeFluid) keys.add('brakefluid');
+  if (/\bbrake(s)?\b/.test(w) && !hasBrakeFluid) keys.add('brake');
+
+  if (/\btyre(s)?\b/.test(w) || /\btire(s)?\b/.test(w)) keys.add('tyres');
+
+  if (/\bbattery\b/.test(w)) keys.add('battery');
+
+  return keys;
+}
+
+/* Explicitly apply a known list of maintenance action keys (from
+   record.maintenanceActions) to the relevant baseline fields. Used by both
+   Add Service Record (detected) and Mark as Serviced (explicit + detected),
+   so there is exactly one place that performs baseline resets. */
+function applyMaintenanceActionsFromKeys(keys, odo, date) {
+  MAINT_RESET_TARGETS.forEach(t => {
+    if (keys.includes(t.key)) {
+      appData[t.field] = t.type === 'km' ? odo : date;
+    }
+  });
+}
+
+/* Recompute every maintenance baseline from the remaining service history
+   plus the original maintenanceSeed. Used after a service record is
+   deleted, so an item's status can't be left in an impossible state. */
+function recalculateMaintenanceState() {
+  const hist = appData.history || [];
+  MAINT_RESET_TARGETS.forEach(t => {
+    const matches = hist.filter(h => (Array.isArray(h.maintenanceActions) ? h.maintenanceActions : Array.from(detectMaintenanceKeys(h.work || ''))).includes(t.key));
+    if (matches.length) {
+      matches.sort((a, b) => {
+        const dcmp = new Date(a.date) - new Date(b.date);
+        if (dcmp !== 0) return dcmp;
+        return (Number(a.odo) || 0) - (Number(b.odo) || 0);
+      });
+      const best = matches[matches.length - 1];
+      appData[t.field] = t.type === 'km' ? (Number(best.odo) || 0) : best.date;
+    } else if (appData.maintenanceSeed && appData.maintenanceSeed[t.key] !== undefined && appData.maintenanceSeed[t.key] !== null) {
+      appData[t.field] = appData.maintenanceSeed[t.key];
+    }
+    // else: no matches and no seed — leave the existing value untouched
+    // rather than arbitrarily resetting it.
+  });
+}
+
+/* ── UI HELPERS ── */
+function fmt(n) { return n >= 1000 ? Number(n).toLocaleString('en-IN') : n; }
+function fmtCurrency(n) { return '₹' + Number(n || 0).toLocaleString('en-IN'); }
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+function daysBetween(d1, d2) {
+  return Math.round((new Date(d2) - new Date(d1)) / 86400000);
+}
+function showToast(msg, icon = '✅') {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 2500);
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function togglePwVis(id, btn) {
+  const inp = document.getElementById(id);
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+function showFieldErr(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (msg) el.textContent = msg;
+  el.classList.add('show');
+}
+function hideFieldErr(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('show');
+}
+function escapeHtml(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ════════════════════════════════════════════
+   SERVICE RECORD ARCHITECTURE
+   One shared, reusable path for creating/normalizing service records so
+   History → Add Service Record and Maintenance → Mark as Serviced can
+   never drift out of sync with each other.
+═══════════════════════════════════════════ */
+function normalizeServiceRecord(h) {
+  return {
+    id: h.id != null ? h.id : Date.now().toString(),
+    date: h.date,
+    odo: Number(h.odo) || 0,
+    cost: Number(h.cost) || 0,
+    work: h.work || '',
+    mechanic: h.mechanic || '',
+    notes: h.notes || '',
+    parts: Array.isArray(h.parts) ? h.parts.map(p => ({ id: p.id || ('part-' + Math.random().toString(36).slice(2,9)), name: p.name || '', cost: Number(p.cost) || 0 })) : [],
+    labourCost: Number(h.labourCost) || 0,
+    otherCost: Number(h.otherCost) || 0,
+    maintenanceActions: Array.isArray(h.maintenanceActions) ? h.maintenanceActions : [],
+  };
+}
+function calculatePartsTotal(parts) {
+  return (parts || []).reduce((s, p) => s + (Number(p.cost) || 0), 0);
+}
+function calculateBreakdownTotal(parts, labourCost, otherCost) {
+  return calculatePartsTotal(parts) + (Number(labourCost) || 0) + (Number(otherCost) || 0);
+}
+function createServiceRecord(raw) {
+  const record = normalizeServiceRecord({ ...raw, id: Date.now().toString() });
+  appData.history = [...(appData.history || []), record];
+  // Never reduce the global current odometer because of a historical entry.
+  if (record.odo > (appData.odometer || 0)) appData.odometer = record.odo;
+  return record;
+}
+
+/* ════════════════════════════════════════════
+   UNIVERSAL GITHUB SYNC & SECURITY MODULE
+═══════════════════════════════════════════ */
+/* ── Cloud vault format (version 2 — cross-browser) ──
+   The PBKDF2 salt and KDF parameters are NON-SECRET and are stored inside the
+   cloud envelope so any browser can re-derive the same AES-256-GCM key from
+   the Master Passphrase alone. The passphrase and the derived key are never
+   uploaded.
+   {
+     version: 2, type: "SP125_CLOUD_VAULT",
+     kdf:    { name: "PBKDF2", hash: "SHA-256", iterations, salt: [...] },
+     cipher: { name: "AES-256-GCM", iv: [...], ciphertext: [...] }
+   }
+   Legacy (v1) vaults were just { iv: [...], ciphertext: [...] } with the salt
+   only present in the original browser's IndexedDB. */
+const CLOUD_VAULT_TYPE = 'SP125_CLOUD_VAULT';
+const CLOUD_VAULT_VERSION = 2;
+const CLOUD_KDF_NAME = 'PBKDF2';
+const CLOUD_KDF_HASH = 'SHA-256';
+const CLOUD_KDF_ITERATIONS = 100000;
+const CLOUD_KDF_MIN_ITERATIONS = 100000;
+const CLOUD_KDF_MAX_ITERATIONS = 2000000;
+const CLOUD_SALT_BYTES = 16;
+const CLOUD_CIPHER_NAME = 'AES-256-GCM';
+const CLOUD_IV_BYTES = 12;
+const GCM_TAG_BYTES = 16;
+
+const SYNC_ERRORS = {
+  WRONG_PASSPHRASE: {
+    message: 'Decryption failed. The Master Encryption Passphrase does not match this GitHub vault.',
+    short: 'Wrong passphrase'
+  },
+  VAULT_DAMAGED: {
+    message: 'The GitHub vault appears damaged or has an invalid encryption format.',
+    short: 'Vault damaged'
+  },
+  LEGACY_NO_SALT: {
+    message: 'This GitHub vault was created with an older encryption format that did not store its PBKDF2 salt in the cloud. Open SP125 Care in the original browser/device and connect once to migrate the vault to the new cross-browser encryption format.',
+    short: 'Legacy vault: migration needed'
+  },
+  VAULT_NOT_FOUND: {
+    message: 'The SP125 Care encrypted vault file was not found in this Secret Gist.',
+    short: 'Vault file not found'
+  },
+  VAULT_UNSUPPORTED: {
+    message: 'The GitHub vault uses an unsupported encryption format.',
+    short: 'Unsupported vault format'
+  },
+  VAULT_EXISTS: {
+    message: 'This Secret Gist already contains an SP125 Care vault, so Sign Up will not overwrite it. Use the Login tab to connect to it, or leave the Gist ID blank to create a new Gist.',
+    short: 'Gist already has a vault'
+  },
+  SALT_CHANGED: {
+    message: 'The GitHub vault encryption was updated from another browser or device. Disconnect, then unlock or log in again with your Master Encryption Passphrase to continue.',
+    short: 'Vault changed: unlock again'
+  }
+};
+
+class SyncError extends Error {
+  constructor(code) {
+    const def = SYNC_ERRORS[code] || { message: 'GitHub vault error.', short: 'Vault error' };
+    super(def.message);
+    this.name = 'SyncError';
+    this.code = code;
+    this.short = def.short;   // brief text suitable for a one-line toast
+  }
+}
+
+class GitHubSyncModule {
+  constructor() {
+    this.session = {
+      token: null,
+      gistId: null,
+      cryptoKey: null,          // AES-256-GCM CLOUD key (derived with the cloud-vault salt)
+      cloudCryptoVersion: null, // cloud envelope version the key belongs to
+      cloudSalt: null,          // non-secret PBKDF2 salt of the cloud vault (Uint8Array)
+      cloudKdf: null,           // { name, hash, iterations } of the cloud vault
+      user: null
+    };
+    this.lastVaultStatus = null; // 'existing' | 'new' | 'migrated' (informational, for UI)
+    this.state = 'DISCONNECTED'; // DISCONNECTED, CONNECTING, CONNECTED, ERROR, LOCKED
+    this.dbName = 'SP125_GistSyncDB';
+    this.storeName = 'auth_profile';
+    this.syncFileName = 'sp125_maintenance_vault.json.enc';
+    this.listeners = new Map();
+  }
+
+  on(event, cb) {
+    if (!this.listeners.has(event)) this.listeners.set(event, []);
+    this.listeners.get(event).push(cb);
+  }
+
+  emit(event, data) {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).forEach(cb => {
+        try { cb(data); } catch (e) { console.error(`SyncModule listener error on ${event}:`, e); }
+      });
+    }
+  }
+
+  setState(newState, meta = null) {
+    this.state = newState;
+    this.updateIndicatorUI();
+    this.emit('stateChange', { state: newState, meta });
+  }
+
+  /* ── Cryptography (PBKDF2 / AES-256-GCM) ── */
+  async _deriveKey(passphrase, saltBuffer, iterations = CLOUD_KDF_ITERATIONS) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(passphrase),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+    return crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: saltBuffer,
+        iterations: iterations,
+        hash: CLOUD_KDF_HASH,
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
+  async _encryptText(plaintext, cryptoKey, additionalData = null) {
+    const iv = crypto.getRandomValues(new Uint8Array(CLOUD_IV_BYTES));
+    const encoded = new TextEncoder().encode(plaintext);
+    const params = { name: 'AES-GCM', iv };
+    if (additionalData) params.additionalData = additionalData;
+    const ciphertext = await crypto.subtle.encrypt(params, cryptoKey, encoded);
+    return {
+      iv: Array.from(iv),
+      ciphertext: Array.from(new Uint8Array(ciphertext))
+    };
+  }
+
+  async _decryptText(cipherObj, cryptoKey, additionalData = null) {
+    const iv = new Uint8Array(cipherObj.iv);
+    const data = new Uint8Array(cipherObj.ciphertext);
+    const params = { name: 'AES-GCM', iv };
+    if (additionalData) params.additionalData = additionalData;
+    const decrypted = await crypto.subtle.decrypt(params, cryptoKey, data);
+    return new TextDecoder().decode(decrypted);
+  }
+
+  /* ── Cloud vault envelope (v2) helpers ── */
+
+  // Authenticated (not secret) header: binds the KDF/cipher parameters to the ciphertext.
+  _envelopeAad(iterations) {
+    return new TextEncoder().encode(
+      [CLOUD_VAULT_TYPE, 'v' + CLOUD_VAULT_VERSION, CLOUD_KDF_NAME, CLOUD_KDF_HASH, iterations, CLOUD_CIPHER_NAME].join('|')
+    );
+  }
+
+  _toBytes(arr, min, max) {
+    if (!Array.isArray(arr) || arr.length < min || arr.length > max) return null;
+    const out = new Uint8Array(arr.length);
+    for (let i = 0; i < arr.length; i++) {
+      const v = arr[i];
+      if (!Number.isInteger(v) || v < 0 || v > 255) return null;
+      out[i] = v;
+    }
+    return out;
+  }
+
+  // Validates a version-2 envelope and returns typed values. Never touches secrets.
+  _parseV2Envelope(env) {
+    const kdf = env && env.kdf, cipher = env && env.cipher;
+    if (!kdf || typeof kdf !== 'object' || !cipher || typeof cipher !== 'object') {
+      throw new SyncError('VAULT_DAMAGED');
+    }
+    if (kdf.name !== CLOUD_KDF_NAME || kdf.hash !== CLOUD_KDF_HASH || cipher.name !== CLOUD_CIPHER_NAME) {
+      throw new SyncError('VAULT_UNSUPPORTED');
+    }
+    const iterations = kdf.iterations;
+    if (!Number.isInteger(iterations) || iterations < CLOUD_KDF_MIN_ITERATIONS || iterations > CLOUD_KDF_MAX_ITERATIONS) {
+      throw new SyncError('VAULT_UNSUPPORTED');
+    }
+    const salt = this._toBytes(kdf.salt, CLOUD_SALT_BYTES, 64);
+    const iv = this._toBytes(cipher.iv, CLOUD_IV_BYTES, CLOUD_IV_BYTES);
+    const ciphertext = this._toBytes(cipher.ciphertext, GCM_TAG_BYTES, Number.MAX_SAFE_INTEGER);
+    if (!salt || !iv || !ciphertext) throw new SyncError('VAULT_DAMAGED');
+    return { iterations, salt, iv, ciphertext };
+  }
+
+  // Explicit format detection. Returns { kind: 'blank' | 'v2' | 'legacy', ... } or throws SyncError.
+  _classifyVault(content) {
+    if (content === null || content === undefined || String(content).trim() === '') return { kind: 'blank' };
+    let obj;
+    try { obj = JSON.parse(content); } catch { throw new SyncError('VAULT_DAMAGED'); }
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) throw new SyncError('VAULT_UNSUPPORTED');
+
+    if (obj.version !== undefined) {
+      if (obj.version !== CLOUD_VAULT_VERSION || obj.type !== CLOUD_VAULT_TYPE) throw new SyncError('VAULT_UNSUPPORTED');
+      return { kind: 'v2', envelope: obj, parsed: this._parseV2Envelope(obj) };
+    }
+    if (obj.init) return { kind: 'blank' }; // freshly created blank gist placeholder
+    if (obj.iv && obj.ciphertext) {
+      const iv = this._toBytes(obj.iv, CLOUD_IV_BYTES, CLOUD_IV_BYTES);
+      const ct = this._toBytes(obj.ciphertext, GCM_TAG_BYTES, Number.MAX_SAFE_INTEGER);
+      if (!iv || !ct) throw new SyncError('VAULT_DAMAGED');
+      return { kind: 'legacy', legacy: { iv: Array.from(iv), ciphertext: Array.from(ct) } };
+    }
+    throw new SyncError('VAULT_UNSUPPORTED');
+  }
+
+  // Fresh random cloud salt + derived AES key (used for NEW vaults and legacy migration).
+  async _newCloudKey(passphrase) {
+    const salt = crypto.getRandomValues(new Uint8Array(CLOUD_SALT_BYTES));
+    const cryptoKey = await this._deriveKey(passphrase, salt, CLOUD_KDF_ITERATIONS);
+    return { cryptoKey, salt, iterations: CLOUD_KDF_ITERATIONS };
+  }
+
+  // Encrypt with an already-derived key + its (non-secret) salt → versioned envelope.
+  async _sealCloudEnvelope(plaintext, cryptoKey, salt, iterations) {
+    const enc = await this._encryptText(plaintext, cryptoKey, this._envelopeAad(iterations));
+    return {
+      version: CLOUD_VAULT_VERSION,
+      type: CLOUD_VAULT_TYPE,
+      kdf: { name: CLOUD_KDF_NAME, hash: CLOUD_KDF_HASH, iterations, salt: Array.from(salt) },
+      cipher: { name: CLOUD_CIPHER_NAME, iv: enc.iv, ciphertext: enc.ciphertext }
+    };
+  }
+
+  // Decrypt with an already-derived key. AES-GCM auth failure ⇒ wrong passphrase.
+  async _openCloudEnvelope(parsed, cryptoKey) {
+    try {
+      return await this._decryptText(
+        { iv: parsed.iv, ciphertext: parsed.ciphertext },
+        cryptoKey,
+        this._envelopeAad(parsed.iterations)
+      );
+    } catch {
+      throw new SyncError('WRONG_PASSPHRASE');
+    }
+  }
+
+  // New salt + key + envelope from a passphrase.
+  async _encryptCloudData(plaintext, passphrase) {
+    const k = await this._newCloudKey(passphrase);
+    const envelope = await this._sealCloudEnvelope(plaintext, k.cryptoKey, k.salt, k.iterations);
+    return { envelope, cryptoKey: k.cryptoKey, salt: k.salt, iterations: k.iterations };
+  }
+
+  // Derives the key from passphrase + the salt/params INSIDE the envelope, then decrypts.
+  async _decryptCloudData(envelope, passphrase) {
+    const parsed = this._parseV2Envelope(envelope);
+    const cryptoKey = await this._deriveKey(passphrase, parsed.salt, parsed.iterations);
+    const plaintext = await this._openCloudEnvelope(parsed, cryptoKey);
+    return { plaintext, cryptoKey, salt: parsed.salt, iterations: parsed.iterations };
+  }
+
+  // Structure check of decrypted data (same shapes handleCloudDownload accepts).
+  _parseVaultPlaintext(str) {
+    let obj;
+    try { obj = JSON.parse(str); } catch { throw new SyncError('VAULT_DAMAGED'); }
+    const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+    if (!isObj(obj) || !(isObj(obj.maintenanceData) || obj.odometer !== undefined)) {
+      throw new SyncError('VAULT_DAMAGED');
+    }
+    return obj;
+  }
+
+  /* ── IndexedDB Encrypted Store ── */
+  _openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(this.dbName, 1);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(this.storeName)) {
+          db.createObjectStore(this.storeName, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async getStoredProfile() {
+    try {
+      const db = await this._openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(this.storeName, 'readonly');
+        const req = tx.objectStore(this.storeName).get('main_profile');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    } catch { return null; }
+  }
+
+  async saveStoredProfile(profile) {
+    const db = await this._openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      const req = tx.objectStore(this.storeName).put({ id: 'main_profile', ...profile });
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async deleteStoredProfile() {
+    const db = await this._openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(this.storeName, 'readwrite');
+      const req = tx.objectStore(this.storeName).delete('main_profile');
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  /* ── RAM Scrubbing ── */
+  wipeRAM() {
+    if (this.session.token) this.session.token = '0'.repeat(this.session.token.length);
+    if (this.session.gistId) this.session.gistId = '0'.repeat(this.session.gistId.length);
+    this.session.token = null;
+    this.session.gistId = null;
+    this.session.cryptoKey = null;
+    if (this.session.cloudSalt) this.session.cloudSalt.fill(0);
+    this.session.cloudSalt = null;
+    this.session.cloudKdf = null;
+    this.session.cloudCryptoVersion = null;
+    this.session.user = null;
+    this.lastVaultStatus = null;
+  }
+
+  /* ── Lifecycle ── */
+  async init() {
+    try {
+      const stored = await this.getStoredProfile();
+      if (stored && stored.salt && stored.encryptedPayload) {
+        this.setState('LOCKED');
+      } else {
+        this.setState('DISCONNECTED');
+      }
+    } catch (err) {
+      this.setState('ERROR', err.message);
+    }
+  }
+
+  updateIndicatorUI() {
+    const badge = document.getElementById('gh-header-badge');
+    const label = document.getElementById('gh-badge-label');
+    if (!badge || !label) return;
+
+    badge.setAttribute('data-state', this.state);
+    switch (this.state) {
+      case 'DISCONNECTED': label.textContent = 'Disconnected'; break;
+      case 'CONNECTING': label.textContent = 'Connecting…'; break;
+      case 'CONNECTED': label.textContent = 'Connected'; break;
+      case 'ERROR': label.textContent = 'Sync Error'; break;
+      case 'LOCKED': label.textContent = 'Locked (Tap)'; break;
+    }
+  }
+
+  /* ── GitHub REST API ── */
+  async verifyTokenAndGetUser(token) {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      }
+    });
+    if (!res.ok) {
+      throw new Error(`GitHub token verification failed (${res.status})`);
+    }
+    return await res.json();
+  }
+
+  async createNewGist(token) {
+    const payload = {
+      description: 'SP125 Care Encrypted Motorcycle Maintenance Vault',
+      public: false,
+      files: {
+        [this.syncFileName]: {
+          content: JSON.stringify({ init: true, timestamp: Date.now() }),
+        },
+      },
+    };
+
+    const res = await fetch('https://api.github.com/gists', {
+      method: 'POST',
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || `Failed to create secret Gist (${res.status})`);
+    }
+    const json = await res.json();
+    return json.id;
+  }
+
+  async verifyGistAccess(token, gistId) {
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error(`Secret Gist unreachable (${res.status})`);
+    return await res.json();
+  }
+
+/* ── Vault file access ── */
+  async _readVaultContent(gist) {
+    const file = gist && gist.files ? gist.files[this.syncFileName] : null;
+    if (!file) return { exists: false, content: null };
+    let content = file.content;
+    if (file.truncated && file.raw_url) {
+      // The Gist API truncates large files; fetch the full text.
+      const res = await fetch(file.raw_url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Could not read the full vault file (${res.status})`);
+      content = await res.text();
+    }
+    return { exists: true, content };
+  }
+
+  async _putVaultEnvelope(token, gistId, envelope) {
+    const patchBody = {
+      files: {
+        [this.syncFileName]: {
+          content: JSON.stringify(envelope)
+        }
+      }
+    };
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patchBody)
+    });
+    if (!res.ok) throw new Error(`Remote upload failed (${res.status})`);
+    return true;
+  }
+
+  _sameCloudKdf(parsed) {
+    const s = this.session;
+    if (!s.cloudSalt || !s.cloudKdf) return false;
+    if (parsed.iterations !== s.cloudKdf.iterations) return false;
+    if (parsed.salt.length !== s.cloudSalt.length) return false;
+    for (let i = 0; i < parsed.salt.length; i++) if (parsed.salt[i] !== s.cloudSalt[i]) return false;
+    return true;
+  }
+
+  // Safety guard: never overwrite a vault we could not have read with the current session key.
+  async _assertSafeToOverwrite() {
+    const gist = await this.verifyGistAccess(this.session.token, this.session.gistId);
+    const { exists, content } = await this._readVaultContent(gist);
+    if (!exists) return;
+    const info = this._classifyVault(content); // damaged / unsupported ⇒ throws, nothing is overwritten
+    if (info.kind === 'blank') return;
+    if (info.kind === 'legacy') throw new SyncError('LEGACY_NO_SALT');
+    if (!this._sameCloudKdf(info.parsed)) throw new SyncError('SALT_CHANGED');
+  }
+
+  async uploadData(payloadObj) {
+    if (this.state !== 'CONNECTED' || !this.session.cryptoKey || !this.session.cloudSalt || !this.session.cloudKdf) {
+      throw new Error('GitHub session must be unlocked and connected.');
+    }
+    await this._assertSafeToOverwrite();
+    const jsonStr = JSON.stringify(payloadObj);
+    const envelope = await this._sealCloudEnvelope(
+      jsonStr,
+      this.session.cryptoKey,
+      this.session.cloudSalt,
+      this.session.cloudKdf.iterations
+    );
+    return this._putVaultEnvelope(this.session.token, this.session.gistId, envelope);
+  }
+
+  async downloadData({ requireVault = false } = {}) {
+    if (!this.session.token || !this.session.gistId || !this.session.cryptoKey) {
+      throw new Error('Credentials uninitialized in volatile memory.');
+    }
+    const gist = await this.verifyGistAccess(this.session.token, this.session.gistId);
+    const { exists, content } = await this._readVaultContent(gist);
+    if (!exists) {
+      if (requireVault) throw new SyncError('VAULT_NOT_FOUND');
+      return null;
+    }
+    const info = this._classifyVault(content);
+    if (info.kind === 'blank') return null; // Newly initialized blank gist
+    if (info.kind === 'legacy') throw new SyncError('LEGACY_NO_SALT');
+
+    // v2: the session key may only be reused if it was derived with THIS vault's salt/params.
+    if (!this._sameCloudKdf(info.parsed)) throw new SyncError('SALT_CHANGED');
+    const plaintext = await this._openCloudEnvelope(info.parsed, this.session.cryptoKey);
+    return this._parseVaultPlaintext(plaintext);
+  }
+
+  /* ── Local (IndexedDB) credential profile — uses its OWN random salt, unrelated to the cloud salt ── */
+  async _saveCredentialProfile({ token, gistId, passphrase, user }) {
+    const localSalt = crypto.getRandomValues(new Uint8Array(16));
+    const localKey = await this._deriveKey(passphrase, localSalt);
+    const encPayload = await this._encryptText(JSON.stringify({ token, gistId, username: user.login }), localKey);
+    await this.saveStoredProfile({
+      salt: Array.from(localSalt),
+      encryptedPayload: encPayload,
+      user: { login: user.login, name: user.name || user.login }
+    });
+  }
+
+  _applySession({ token, gistId, user, cloud }) {
+    this.session.token = token;
+    this.session.gistId = gistId;
+    this.session.user = user;
+    this.session.cryptoKey = cloud.cryptoKey;
+    this.session.cloudCryptoVersion = CLOUD_VAULT_VERSION;
+    this.session.cloudSalt = new Uint8Array(cloud.salt);
+    this.session.cloudKdf = { name: CLOUD_KDF_NAME, hash: CLOUD_KDF_HASH, iterations: cloud.iterations };
+    this.lastVaultStatus = cloud.status;
+  }
+
+  /* Legacy (v1) vault: only decryptable with the salt kept in THIS browser's IndexedDB profile.
+     On success the data is re-encrypted into the v2 envelope (fresh cloud salt) and uploaded.
+     Nothing is written to the cloud unless the old vault has already been decrypted. */
+  async _migrateLegacyVault(legacy, { passphrase, token, gistId, stored, localKey }) {
+    if (!stored || !stored.salt) throw new SyncError('LEGACY_NO_SALT');
+    const lk = localKey || await this._deriveKey(passphrase, new Uint8Array(stored.salt));
+    let plaintext;
+    try {
+      plaintext = await this._decryptText(legacy, lk);
+    } catch {
+      let passphraseOk = !!localKey; // an unlock already proved the passphrase against the local profile
+      if (!passphraseOk && stored.encryptedPayload) {
+        try { await this._decryptText(stored.encryptedPayload, lk); passphraseOk = true; } catch {}
+      }
+      // Correct passphrase but the old salt doesn't fit ⇒ vault was written under another browser's salt.
+      throw new SyncError(passphraseOk ? 'LEGACY_NO_SALT' : 'WRONG_PASSPHRASE');
+    }
+
+    const sealed = await this._encryptCloudData(plaintext, passphrase);
+    const check = await this._openCloudEnvelope(this._parseV2Envelope(sealed.envelope), sealed.cryptoKey);
+    if (check !== plaintext) throw new SyncError('VAULT_DAMAGED'); // self-check before touching the cloud
+    await this._putVaultEnvelope(token, gistId, sealed.envelope);
+    return { cryptoKey: sealed.cryptoKey, salt: sealed.salt, iterations: sealed.iterations, status: 'migrated' };
+  }
+
+  /* Resolves the AES cloud key for an existing gist (or prepares one for a blank gist). */
+  async _resolveCloudVault({ gist, token, gistId, passphrase, stored = null, localKey = null, allowMissing = false }) {
+    const { exists, content } = await this._readVaultContent(gist);
+    if (!exists) {
+      if (!allowMissing) throw new SyncError('VAULT_NOT_FOUND');
+      const k = await this._newCloudKey(passphrase);
+      return { ...k, status: 'new' };
+    }
+    const info = this._classifyVault(content);
+    if (info.kind === 'blank') {
+      const k = await this._newCloudKey(passphrase);
+      return { ...k, status: 'new' };
+    }
+    if (info.kind === 'v2') {
+      // Cross-browser path: salt + params come from the cloud envelope, NOT from IndexedDB.
+      const r = await this._decryptCloudData(info.envelope, passphrase);
+      this._parseVaultPlaintext(r.plaintext); // validate SP125 data structure
+      return { cryptoKey: r.cryptoKey, salt: r.salt, iterations: r.iterations, status: 'existing' };
+    }
+    return this._migrateLegacyVault(info.legacy, { passphrase, token, gistId, stored, localKey });
+  }
+
+  /* Manual login (token + Gist ID + passphrase) — works from any browser for v2 vaults. */
+  async connectWithCredentials({ token, gistId, passphrase }) {
+    const user = await this.verifyTokenAndGetUser(token);
+    const gist = await this.verifyGistAccess(token, gistId);
+    const stored = await this.getStoredProfile(); // only used as the legacy-salt source
+    const cloud = await this._resolveCloudVault({ gist, token, gistId, passphrase, stored, allowMissing: false });
+    await this._saveCredentialProfile({ token, gistId, passphrase, user });
+    this._applySession({ token, gistId, user, cloud });
+    this.setState('CONNECTED');
+    return user;
+  }
+
+  /* Sign up: brand-new vault with a fresh cloud salt, uploaded inside the v2 envelope. */
+  async signUpNewVault({ token, gistId, passphrase, user, initialData, gist = null }) {
+    if (gist) {
+      // Never overwrite an existing vault during sign-up.
+      const { exists, content } = await this._readVaultContent(gist);
+      if (exists) {
+        let kind = null;
+        try { kind = this._classifyVault(content).kind; } catch { kind = 'invalid'; }
+        if (kind !== 'blank') throw new SyncError('VAULT_EXISTS');
+      }
+    }
+    const sealed = await this._encryptCloudData(JSON.stringify(initialData), passphrase);
+    await this._putVaultEnvelope(token, gistId, sealed.envelope);
+    await this._saveCredentialProfile({ token, gistId, passphrase, user });
+    this._applySession({
+      token, gistId, user,
+      cloud: { cryptoKey: sealed.cryptoKey, salt: sealed.salt, iterations: sealed.iterations, status: 'new' }
+    });
+    this.setState('CONNECTED');
+    return user;
+  }
+
+  async unlockWithPassphrase(passphrase) {
+    const stored = await this.getStoredProfile();
+    if (!stored) throw new Error('No encrypted profile found on this device.');
+
+    // 1) Local profile: decrypted with the LOCAL (IndexedDB) salt. Proves the passphrase on this device.
+    const localSalt = new Uint8Array(stored.salt);
+    const localKey = await this._deriveKey(passphrase, localSalt);
+    const decryptedStr = await this._decryptText(stored.encryptedPayload, localKey);
+    const creds = JSON.parse(decryptedStr);
+
+    this.setState('CONNECTING');
+    try {
+      const user = await this.verifyTokenAndGetUser(creds.token);
+      const gist = await this.verifyGistAccess(creds.token, creds.gistId);
+
+      // 2) Cloud vault: key derived from the salt stored in the cloud envelope (or legacy migration).
+      const cloud = await this._resolveCloudVault({
+        gist, token: creds.token, gistId: creds.gistId, passphrase, stored, localKey, allowMissing: true
+      });
+      this._applySession({ token: creds.token, gistId: creds.gistId, user, cloud });
+      this.setState('CONNECTED');
+      return user;
+    } catch (err) {
+      this.setState('ERROR', err.message);
+      throw err;
+    }
+  }
+
+  disconnect() {
+    this.wipeRAM();
+    this.setState('DISCONNECTED');
+  }
+
+  async purgeCredentials() {
+    this.wipeRAM();
+    await this.deleteStoredProfile();
+    this.setState('DISCONNECTED');
+  }
+}
+
+const ghSync = new GitHubSyncModule();
+
+/* ════════════════════════════════════════════
+   APP SESSION & GITHUB AUTH MANAGEMENT
+═══════════════════════════════════════════ */
+const AUTH_SESSION_KEY = 'sp125_active_session';
+
+function saveAppSession(user) {
+  try {
+    sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+      username: user.login || user.username || 'Local Rider',
+      name: user.name || user.login || 'Rider',
+      avatar: user.avatar_url || '',
+      loggedAt: new Date().toISOString()
+    }));
+  } catch(e) {}
+}
+
+function loadAppSession() {
+  try {
+    const r = sessionStorage.getItem(AUTH_SESSION_KEY);
+    return r ? JSON.parse(r) : null;
+  } catch { return null; }
+}
+
+function clearAppSession() {
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+function updateAccountUI(user) {
+  const nameEl = document.getElementById('gh-account-name');
+  const subEl = document.getElementById('gh-account-sub');
+  if (user) {
+    if (nameEl) nameEl.textContent = user.name || user.login || user.username;
+    if (subEl) subEl.textContent = `GitHub: @${user.login || user.username} · Encrypted Sync`;
+  } else {
+    if (nameEl) nameEl.textContent = 'Local User';
+    if (subEl) subEl.textContent = 'Not connected to GitHub';
+  }
+}
+
+function enterApp(user) {
+  saveAppSession(user);
+  updateAccountUI(user);
+  const authScreen = document.getElementById('auth-screen');
+  authScreen.classList.add('hidden');
+  setTimeout(() => { authScreen.style.display = 'none'; }, 520);
+}
+
+function continueLocalMode() {
+  const localUser = { login: 'local_rider', name: 'Local Rider' };
+  enterApp(localUser);
+  showToast('Entered Local-Only Mode', '🏍️');
+}
+
+function doLogout() {
+  if (!confirm('Log out of SP125 Care?')) return;
+  clearAppSession();
+  ghSync.disconnect();
+  updateAccountUI(null);
+
+  const authScreen = document.getElementById('auth-screen');
+  authScreen.style.display = '';
+  requestAnimationFrame(() => {
+    authScreen.classList.remove('hidden');
+  });
+  checkStoredCredentialsUI();
+  showToast('Logged out', '👋');
+}
+
+/* ════════════════════════════════════════════
+   AUTH SCREEN FLOWS (LOGIN / SIGNUP)
+═══════════════════════════════════════════ */
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('auth-form-login');
+  const signupForm = document.getElementById('auth-form-signup');
+  const tabLogin = document.getElementById('tab-login');
+  const tabSignup = document.getElementById('tab-signup');
+
+  if (tab === 'login') {
+    loginForm.style.display = 'block';
+    signupForm.style.display = 'none';
+    tabLogin.classList.add('active');
+    tabSignup.classList.remove('active');
+  } else {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    tabLogin.classList.remove('active');
+    tabSignup.classList.add('active');
+  }
+}
+
+async function checkStoredCredentialsUI() {
+  const profile = await ghSync.getStoredProfile();
+  const unlockSec = document.getElementById('login-unlock-section');
+  const manualSec = document.getElementById('login-manual-section');
+  if (profile && profile.encryptedPayload) {
+    if (unlockSec) unlockSec.style.display = 'block';
+    if (manualSec) manualSec.style.display = 'none';
+  } else {
+    if (unlockSec) unlockSec.style.display = 'none';
+    if (manualSec) manualSec.style.display = 'block';
+  }
+}
+
+function showManualLoginInputs() {
+  document.getElementById('login-unlock-section').style.display = 'none';
+  document.getElementById('login-manual-section').style.display = 'block';
+}
+
+function setBtnLoading(btnId, loading, label = 'Submit') {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.classList.toggle('loading', loading);
+}
+
+/* ── DO LOGIN ── */
+function showAuthNotice(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideAuthNotice(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = '';
+  el.classList.remove('show');
+}
+
+async function doGitHubLogin() {
+  const token = (document.getElementById('login-token').value || '').trim();
+  const gistId = (document.getElementById('login-gist-id').value || '').trim();
+  let passphrase = (document.getElementById('login-passphrase').value || '').trim();
+
+  let err = false;
+  if (!token) { showFieldErr('login-token-err'); err = true; } else hideFieldErr('login-token-err');
+  if (!gistId) { showFieldErr('login-gist-err'); err = true; } else hideFieldErr('login-gist-err');
+  if (!passphrase) { showFieldErr('login-pass-err'); err = true; } else hideFieldErr('login-pass-err');
+  if (err) return;
+
+  hideAuthNotice('login-vault-err');
+  setBtnLoading('login-btn', true);
+  try {
+    // Verifies token + Gist, reads the cloud envelope (salt/KDF params), derives the cloud key,
+    // decrypts + validates the vault, then stores the encrypted local profile and connects.
+    const user = await ghSync.connectWithCredentials({ token, gistId, passphrase });
+
+    document.getElementById('login-passphrase').value = '';
+    document.getElementById('login-token').value = '';
+    showToast(`Welcome, @${user.login}! 🎉`, '✅');
+    if (ghSync.lastVaultStatus === 'migrated') showToast('Vault upgraded to cross-browser encryption', '🔐');
+    enterApp(user);
+  } catch (e) {
+    showToast('Login Failed: ' + (e.short || e.message), '❌');
+    if (e instanceof SyncError) showAuthNotice('login-vault-err', e.message);
+    ghSync.setState('ERROR', e.message);
+  } finally {
+    passphrase = null;
+    setBtnLoading('login-btn', false);
+  }
+}
+
+async function doUnlockLogin() {
+  let pass = (document.getElementById('login-unlock-pass').value || '').trim();
+  if (!pass) { showFieldErr('login-unlock-err'); return; }
+  hideFieldErr('login-unlock-err');
+  hideAuthNotice('login-unlock-vault-err');
+
+  setBtnLoading('login-unlock-btn', true);
+  try {
+    const user = await ghSync.unlockWithPassphrase(pass);
+    document.getElementById('login-unlock-pass').value = '';
+    showToast(`Unlocked! Welcome, @${user.login}`, '🔓');
+    if (ghSync.lastVaultStatus === 'migrated') showToast('Vault upgraded to cross-browser encryption', '🔐');
+    enterApp(user);
+  } catch (e) {
+    if (e instanceof SyncError) {
+      showToast('Unlock failed: ' + e.short, '❌');
+      showAuthNotice('login-unlock-vault-err', e.message);
+    } else if (e && e.name === 'OperationError') {
+      showToast('Unlock failed: Invalid passphrase', '❌');
+    } else {
+      showToast('Unlock failed: ' + ((e && e.message) || 'Unknown error'), '❌');
+    }
+  } finally {
+    pass = null;
+    setBtnLoading('login-unlock-btn', false);
+  }
+}
+
+/* ── DO SIGNUP ── */
+async function doGitHubSignup() {
+  const token = (document.getElementById('signup-token').value || '').trim();
+  let gistId = (document.getElementById('signup-gist-id').value || '').trim();
+  let passphrase = (document.getElementById('signup-passphrase').value || '').trim();
+
+  let err = false;
+  if (!token) { showFieldErr('signup-token-err'); err = true; } else hideFieldErr('signup-token-err');
+  if (!passphrase || passphrase.length < 8) { showFieldErr('signup-pass-err'); err = true; } else hideFieldErr('signup-pass-err');
+  if (err) return;
+
+  hideAuthNotice('signup-vault-err');
+  setBtnLoading('signup-btn', true);
+  try {
+    const user = await ghSync.verifyTokenAndGetUser(token);
+
+    let existingGist = null;
+    if (!gistId) {
+      gistId = await ghSync.createNewGist(token);
+      showOneTimeGistDialog(gistId);
+    } else {
+      existingGist = await ghSync.verifyGistAccess(token, gistId);
+    }
+
+    // Initial account metadata + local appData bundle
+    const initialCloudData = {
+      account: {
+        userId: 'u_' + user.id,
+        githubId: user.id,
+        login: user.login,
+        name: user.name || user.login,
+        createdAt: new Date().toISOString(),
+        schemaVersion: '2.0'
+      },
+      maintenanceData: appData
+    };
+
+    // Generates the cloud PBKDF2 salt ONCE, encrypts, uploads the v2 envelope (salt + KDF params +
+    // IV + ciphertext), stores the encrypted local profile and connects.
+    await ghSync.signUpNewVault({ token, gistId, passphrase, user, initialData: initialCloudData, gist: existingGist });
+
+    document.getElementById('signup-passphrase').value = '';
+    document.getElementById('signup-token').value = '';
+    showToast(`Account created for @${user.login}!`, '✨');
+    enterApp(user);
+  } catch (e) {
+    showToast('Signup Failed: ' + (e.short || e.message), '❌');
+    if (e instanceof SyncError) showAuthNotice('signup-vault-err', e.message);
+    ghSync.setState('ERROR', e.message);
+  } finally {
+    passphrase = null;
+    setBtnLoading('signup-btn', false);
+  }
+}
+
+function showOneTimeGistDialog(gistId) {
+  document.getElementById('gh-new-gist-id-box').textContent = gistId;
+  openModal('gh-new-gist-modal');
+  document.getElementById('gh-copy-gist-btn').onclick = () => {
+    navigator.clipboard.writeText(gistId);
+    showToast('Gist ID Copied!', '📋');
+  };
+  document.getElementById('gh-confirm-gist-btn').onclick = () => {
+    closeModal('gh-new-gist-modal');
+  };
+}
+
+/* ════════════════════════════════════════════
+   CLOUD UPLOAD / DOWNLOAD (APPEND OR REPLACE)
+═══════════════════════════════════════════ */
+function setCloudStatus(msg, color = 'var(--text3)') {
+  const el = document.getElementById('gh-sync-status-bar');
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+function promptAppendOrReplace(actionTitle, actionDesc) {
+  return new Promise((resolve) => {
+    document.getElementById('gh-choice-title').textContent = actionTitle;
+    document.getElementById('gh-choice-desc').textContent = actionDesc;
+    openModal('gh-choice-dialog');
+
+    const cleanUp = () => {
+      closeModal('gh-choice-dialog');
+      document.getElementById('gh-choice-append-btn').onclick = null;
+      document.getElementById('gh-choice-replace-btn').onclick = null;
+      document.getElementById('gh-choice-cancel-btn').onclick = null;
+    };
+
+    document.getElementById('gh-choice-append-btn').onclick = () => { cleanUp(); resolve('append'); };
+    document.getElementById('gh-choice-replace-btn').onclick = () => { cleanUp(); resolve('replace'); };
+    document.getElementById('gh-choice-cancel-btn').onclick = () => { cleanUp(); resolve(null); };
+  });
+}
+
+/* ── MERGE FUNCTION (APPEND INTELLIGENCE) ── */
+function laterDate(a, b) {
+  if (!a) return b || null;
+  if (!b) return a;
+  return new Date(a) > new Date(b) ? a : b;
+}
+
+function mergeMaintenanceData(base, incoming) {
+  if (!incoming || typeof incoming !== 'object') return base;
+  const merged = { ...base };
+
+  merged.odometer = Math.max(Number(base.odometer || 0), Number(incoming.odometer || 0));
+  merged.lastOilChange = Math.max(Number(base.lastOilChange || 0), Number(incoming.lastOilChange || 0));
+  merged.lastChainLube = Math.max(Number(base.lastChainLube || 0), Number(incoming.lastChainLube || 0));
+  merged.lastAirFilter = Math.max(Number(base.lastAirFilter || 0), Number(incoming.lastAirFilter || 0));
+  merged.lastForkOil = Math.max(Number(base.lastForkOil || 0), Number(incoming.lastForkOil || 0));
+  merged.lastBrakeService = Math.max(Number(base.lastBrakeService || 0), Number(incoming.lastBrakeService || 0));
+  merged.lastTyreService = Math.max(Number(base.lastTyreService || 0), Number(incoming.lastTyreService || 0));
+  merged.lastBatteryService = laterDate(base.lastBatteryService, incoming.lastBatteryService);
+  merged.lastBrakeFluidDate = laterDate(base.lastBrakeFluidDate, incoming.lastBrakeFluidDate);
+  // Keep the base device's original seed — it's only meant to capture a
+  // one-time starting point, not something remote data should overwrite.
+  merged.maintenanceSeed = base.maintenanceSeed || incoming.maintenanceSeed || null;
+
+  // Merge checklist (true overrides false)
+  merged.checklist = { ...(base.checklist || {}) };
+  Object.keys(incoming.checklist || {}).forEach(k => {
+    if (incoming.checklist[k]) merged.checklist[k] = true;
+  });
+
+  // Merge history without duplicating by ID
+  const map = new Map();
+  (base.history || []).forEach(h => { if (h && h.id) map.set(h.id, h); });
+  (incoming.history || []).forEach(h => { if (h && h.id) map.set(h.id, h); });
+  merged.history = Array.from(map.values());
+
+  return merged;
+}
+
+/* ── UPLOAD WORKFLOW ── */
+async function handleCloudUpload() {
+  if (ghSync.state !== 'CONNECTED') {
+    showToast('Connect or unlock GitHub first', '⚠️');
+    openManageModal();
+    return;
+  }
+
+  const choice = await promptAppendOrReplace(
+    'Cloud Upload Sync',
+    'Append merges local records with remote data. Replace completely overwrites remote Gist content with local data.'
+  );
+  if (!choice) return;
+
+  setCloudStatus('Encrypting & Uploading to GitHub…', 'var(--yellow)');
+  try {
+    let payloadToUpload = {
+      account: {
+        user: ghSync.session.user?.login || 'rider',
+        syncedAt: new Date().toISOString()
+      },
+      maintenanceData: appData
+    };
+
+    if (choice === 'append') {
+      const remote = await ghSync.downloadData();
+      const existingData = remote?.maintenanceData || (remote?.odometer !== undefined ? remote : null);
+      if (existingData) {
+        payloadToUpload.maintenanceData = mergeMaintenanceData(existingData, appData);
+        // Also update local copy with merged state
+        appData = payloadToUpload.maintenanceData;
+        saveData();
+        renderPage(currentPage);
+      }
+    }
+
+    await ghSync.uploadData(payloadToUpload);
+    setCloudStatus('✅ Upload synced successfully!', 'var(--green)');
+    showToast('Encrypted upload complete!', '☁️');
+  } catch (err) {
+    setCloudStatus('❌ Upload failed: ' + err.message, 'var(--red)');
+    showToast('Upload error: ' + (err.short || err.message), '❌');
+  }
+}
+
+/* ── DOWNLOAD WORKFLOW ── */
+async function handleCloudDownload() {
+  if (ghSync.state !== 'CONNECTED') {
+    showToast('Connect or unlock GitHub first', '⚠️');
+    openManageModal();
+    return;
+  }
+
+  const choice = await promptAppendOrReplace(
+    'Cloud Download Sync',
+    'Append merges remote records into your device without losing local entries. Replace replaces all local data with the remote cloud copy.'
+  );
+  if (!choice) return;
+
+  setCloudStatus('Downloading & Decrypting from GitHub…', 'var(--yellow)');
+  try {
+    const remote = await ghSync.downloadData({ requireVault: true });
+    if (!remote) throw new Error('Remote Gist vault is empty.');
+
+    const incomingData = remote.maintenanceData || (remote.odometer !== undefined ? remote : null);
+    if (!incomingData || incomingData.odometer === undefined) {
+      throw new Error('Downloaded data did not pass SP125 Care schema validation.');
+    }
+
+    if (choice === 'replace') {
+      appData = { ...DEFAULT_DATA, ...incomingData };
+    } else {
+      appData = mergeMaintenanceData(appData, incomingData);
+    }
+    migrateMaintenanceData();
+
+    saveData();
+    renderPage(currentPage);
+    setCloudStatus('✅ Local records refreshed from cloud!', 'var(--green)');
+    showToast('Cloud sync complete!', '✅');
+  } catch (err) {
+    setCloudStatus('❌ Download failed: ' + err.message, 'var(--red)');
+    showToast('Download error: ' + (err.short || err.message), '❌');
+  }
+}
+
+/* ── MANAGE MODAL & BADGE CLICK ── */
+function openManageModal() {
+  const details = document.getElementById('gh-session-details');
+  const user = ghSync.session.user;
+  details.innerHTML = `
+    <strong>Status:</strong> ${ghSync.state}<br>
+    <strong>GitHub User:</strong> ${user ? '@' + user.login : 'None'}<br>
+    <strong>Secret Gist:</strong> ${ghSync.session.gistId ? ghSync.session.gistId.slice(0,6) + '••••••••' : 'None'}<br>
+    <strong>Volatile Encryption Key:</strong> ${ghSync.session.cryptoKey ? 'Loaded in RAM' : 'Locked'}
+  `;
+  openModal('gh-manage-modal');
+}
+
+function handleBadgeClick() {
+  if (ghSync.state === 'CONNECTED') {
+    openManageModal();
+  } else if (ghSync.state === 'LOCKED') {
+    // Show auth screen unlock
+    const authScreen = document.getElementById('auth-screen');
+    authScreen.style.display = '';
+    requestAnimationFrame(() => authScreen.classList.remove('hidden'));
+    checkStoredCredentialsUI();
+    switchAuthTab('login');
+  } else {
+    // Disconnected / error
+    const authScreen = document.getElementById('auth-screen');
+    authScreen.style.display = '';
+    requestAnimationFrame(() => authScreen.classList.remove('hidden'));
+    checkStoredCredentialsUI();
+    switchAuthTab('login');
+  }
+}
+
+/* ════════════════════════════════════════════
+   NAVIGATION & PAGES
+═══════════════════════════════════════════ */
+let currentPage = 'dashboard';
+const pages = {};
+const navBtns = {};
+
+function initNav() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const pg = btn.dataset.page;
+    navBtns[pg] = btn;
+    btn.addEventListener('click', () => goTo(pg));
+  });
+  document.querySelectorAll('.page').forEach(pg => {
+    pages[pg.id.replace('page-','')] = pg;
+  });
+}
+
+function goTo(name) {
+  if (name === currentPage) return;
+  const prev = pages[currentPage];
+  const next = pages[name];
+  if (!next) return;
+  prev.classList.add('exit-left');
+  prev.classList.remove('active');
+  setTimeout(() => { prev.classList.remove('exit-left'); }, 320);
+  next.style.transform = 'translateX(30px)';
+  next.classList.add('active');
+  requestAnimationFrame(() => { next.style.transform = ''; });
+  navBtns[currentPage].classList.remove('active');
+  navBtns[name].classList.add('active');
+  currentPage = name;
+  renderPage(name);
+}
+
+function renderPage(name) {
+  if (name === 'dashboard') renderDashboard();
+  else if (name === 'checklist') renderChecklist();
+  else if (name === 'history') renderHistory();
+  else if (name === 'expenses') renderExpenses();
+  else if (name === 'settings') renderSettings();
+}
+
+/* ── DASHBOARD RENDERING ── */
+function renderDashboard() {
+  document.getElementById('dash-odo').innerHTML = `${fmt(appData.odometer)} <span>km</span>`;
+  document.getElementById('odo-setting').value = appData.odometer;
+
+  const oilDue = (appData.lastOilChange || 0) + 3000;
+  const kmLeft = oilDue - appData.odometer;
+  const nextEl = document.getElementById('dash-next');
+  if (kmLeft <= 0) nextEl.innerHTML = '⚠️ Engine oil overdue!';
+  else nextEl.innerHTML = `🛢️ Next oil change in ${fmt(kmLeft)} km`;
+
+  renderAlerts();
+  renderProgressGrid();
+
+  const hist = appData.history || [];
+  document.getElementById('qs-services').textContent = hist.length;
+  const total = hist.reduce((s,h) => s + (Number(h.cost)||0), 0);
+  document.getElementById('qs-spend').textContent = fmtCurrency(total);
+  const checked = Object.values(appData.checklist||{}).filter(Boolean).length;
+  const pct = ALL_ITEMS.length ? Math.round(checked / ALL_ITEMS.length * 100) : 0;
+  document.getElementById('qs-checklist').textContent = pct + '%';
+  const last = hist.sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  document.getElementById('qs-last').textContent = last ? fmtDate(last.date) : '—';
+}
+
+function renderAlerts() {
+  const container = document.getElementById('alerts-container');
+  container.innerHTML = '';
+  const alerts = getAlerts();
+  if (alerts.urgent.length) {
+    const el = document.createElement('div');
+    el.className = 'alert-strip';
+    el.innerHTML = `<div class="icon">🚨</div><div class="text"><div class="title">Urgent Attention Needed</div><div class="items">${alerts.urgent.join('<br>')}</div></div>`;
+    container.appendChild(el);
+  }
+  if (alerts.warn.length) {
+    const el = document.createElement('div');
+    el.className = 'alert-strip warn';
+    el.innerHTML = `<div class="icon">⚠️</div><div class="text"><div class="title">Due Soon</div><div class="items">${alerts.warn.join('<br>')}</div></div>`;
+    container.appendChild(el);
+  }
+}
+
+function getAlerts() {
+  const odo = appData.odometer;
+  const urgent = [], warn = [];
+  MAINT_ITEMS.forEach(item => {
+    if (item.type === 'km') {
+      const last = appData[item.lastKey] || 0;
+      const due = last + item.interval;
+      const left = due - odo;
+      if (left <= 0) urgent.push(`${item.label} — overdue by ${fmt(Math.abs(left))} km`);
+      else if (left <= item.interval * 0.15) warn.push(`${item.label} — due in ${fmt(left)} km`);
+    } else {
+      const last = appData[item.lastKey] || today();
+      const days = daysBetween(last, today());
+      const left = item.interval - days;
+      if (left <= 0) urgent.push(`${item.label} — overdue by ${Math.abs(left)} days`);
+      else if (left <= item.interval * 0.1) warn.push(`${item.label} — due soon`);
+    }
+  });
+  const bfDate = appData.lastBrakeFluidDate;
+  if (bfDate) {
+    const days = daysBetween(bfDate, today());
+    if (days > 730) urgent.push('Brake fluid — overdue by ' + (days-730) + ' days');
+    else if (days > 650) warn.push('Brake fluid — due soon');
+  }
+  return { urgent, warn };
+}
+
+function getProgress(item, odo) {
+  if (item.type === 'km') {
+    const last = appData[item.lastKey] || 0;
+    const used = odo - last;
+    const pct = Math.min(100, Math.round(used / item.interval * 100));
+    const left = (last + item.interval) - odo;
+    return { pct, label: left > 0 ? `${fmt(left)} km left` : `Overdue by ${fmt(Math.abs(left))} km`, overdue: left <= 0 };
+  } else {
+    const last = appData[item.lastKey] || today();
+    const days = daysBetween(last, today());
+    const pct = Math.min(100, Math.round(days / item.interval * 100));
+    const left = item.interval - days;
+    return { pct, label: left > 0 ? `${left} days left` : `Overdue by ${Math.abs(left)} days`, overdue: left <= 0 };
+  }
+}
+
+function renderProgressGrid() {
+  const grid = document.getElementById('progress-grid');
+  grid.innerHTML = '';
+  const odo = appData.odometer;
+  MAINT_ITEMS.forEach(item => {
+    const { pct, label } = getProgress(item, odo);
+    const circ = 175.9;
+    const offset = circ - (circ * pct / 100);
+    let color = item.color;
+    if (pct >= 85) color = '#ff4d6a';
+    else if (pct >= 65) color = '#ffc947';
+    const card = document.createElement('div');
+    card.className = 'prog-card';
+    card.innerHTML = `
+      <div class="prog-ring">
+        <svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="28"/><circle class="fill" cx="32" cy="32" r="28" stroke="${color}" stroke-dasharray="${circ}" stroke-dashoffset="${circ}"/></svg>
+        <div class="pct" style="color:${color}">${pct}%</div>
+      </div>
+      <div class="prog-name">${item.emoji} ${item.label}</div>
+      <div class="prog-due ${pct>=85?'status-bad':pct>=65?'status-warn':'status-ok'}">${label}</div>
+      <button type="button" class="mark-serviced-btn" data-key="${item.key}">✓ Mark as Serviced</button>
+    `;
+    card.querySelector('.mark-serviced-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMarkServicedModal(item.key);
+    });
+    grid.appendChild(card);
+    setTimeout(() => {
+      const fill = card.querySelector('.fill');
+      if (fill) fill.style.strokeDashoffset = offset;
+    }, 100);
+  });
+}
+
+/* ── CHECKLIST RENDERING ── */
+function renderChecklist() {
+  const body = document.getElementById('checklist-body');
+  body.innerHTML = '';
+  const cl = appData.checklist || {};
+  let total = 0, checked = 0;
+
+  CHECKLIST.forEach(section => {
+    const sh = document.createElement('div');
+    sh.className = 'section-header';
+    sh.innerHTML = `${section.section}<div class="line"></div>`;
+    body.appendChild(sh);
+    section.items.forEach(item => {
+      const done = !!cl[item.id];
+      total++; if (done) checked++;
+      const el = document.createElement('div');
+      el.className = `check-item ${done ? 'checked' : ''}`;
+      el.dataset.id = item.id;
+      el.innerHTML = `
+        <div class="check-box">${done ? '✓' : ''}</div>
+        <div class="check-label">${item.label}</div>
+      `;
+      el.addEventListener('click', () => toggleCheck(item.id, el));
+      body.appendChild(el);
+    });
+  });
+  updateChecklistHeader(checked, total);
+}
+
+function toggleCheck(id, el) {
+  const cl = appData.checklist || {};
+  cl[id] = !cl[id];
+  appData.checklist = cl;
+  saveData();
+
+  el.classList.toggle('checked', cl[id]);
+  const box = el.querySelector('.check-box');
+  box.textContent = cl[id] ? '✓' : '';
+  const label = el.querySelector('.check-label');
+  if (cl[id]) { label.style.textDecoration = 'line-through'; label.style.color = 'var(--text3)'; }
+  else { label.style.textDecoration = ''; label.style.color = ''; }
+
+  const total = ALL_ITEMS.length;
+  const checked = Object.values(cl).filter(Boolean).length;
+  updateChecklistHeader(checked, total);
+
+  if (cl[id] && checked === total) showToast('All items completed! 🎉', '🎊');
+}
+
+function updateChecklistHeader(checked, total) {
+  document.getElementById('cl-count').textContent = `${checked}/${total}`;
+  const pct = total ? Math.round(checked/total*100) : 0;
+  document.getElementById('cl-bar-fill').style.width = pct + '%';
+}
+
+/* ── HISTORY RENDERING ── */
+function renderHistory(filter = '') {
+  const list = document.getElementById('history-list');
+  let hist = (appData.history || []).slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if (filter) {
+    const f = filter.toLowerCase();
+    hist = hist.filter(h =>
+      (h.work||'').toLowerCase().includes(f) ||
+      (h.mechanic||'').toLowerCase().includes(f) ||
+      (h.notes||'').toLowerCase().includes(f) ||
+      String(h.odo).includes(f)
+    );
+  }
+  if (!hist.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>${filter ? 'No matching records' : 'No service records yet.\nTap + to add your first record.'}</p></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  hist.forEach((h, i) => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    el.style.animationDelay = (i * 0.04) + 's';
+    const tags = (h.work||'').split(',').slice(0,3).map(t=>t.trim()).filter(Boolean);
+    el.innerHTML = `
+      <div class="history-top">
+        <div class="history-date">${fmtDate(h.date)}</div>
+        <div class="history-cost">${fmtCurrency(h.cost)}</div>
+      </div>
+      <div class="history-odo">🛣️ ${fmt(h.odo)} km · ${h.mechanic || 'Unknown'}</div>
+      <div class="history-work">${h.work || '—'}</div>
+      ${tags.length ? `<div class="history-tags">${tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <button class="delete-btn" data-id="${h.id}">🗑 Delete</button>
+        <span style="font-size:12px;color:var(--text3)">${h.notes ? '📝 Has notes' : ''}</span>
+      </div>
+    `;
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.delete-btn')) {
+        deleteRecord(h.id);
+      } else {
+        showDetail(h);
+      }
+    });
+    list.appendChild(el);
+  });
+}
+
+function deleteRecord(id) {
+  if (!confirm('Delete this service record?')) return;
+  appData.history = (appData.history||[]).filter(h=>h.id!==id);
+  // Baselines are stored independently, not derived on the fly — after a
+  // deletion we must recompute them from what remains so we never leave an
+  // impossible maintenance state (e.g. an overdue item still showing "OK").
+  recalculateMaintenanceState();
+  saveData();
+  renderHistory(document.getElementById('history-search').value);
+  renderDashboard();
+  renderExpenses();
+  showToast('Record deleted', '🗑');
+}
+
+function showDetail(h) {
+  const norm = normalizeServiceRecord(h);
+  document.getElementById('detail-title').textContent = fmtDate(h.date);
+  let breakdownHtml = '';
+  if (norm.parts.length || norm.labourCost || norm.otherCost) {
+    const partsLines = norm.parts.length
+      ? norm.parts.map(p => `${escapeHtml(p.name)} — ${fmtCurrency(p.cost)}`).join('<br>')
+      : '—';
+    breakdownHtml = `
+      <div class="detail-row"><span class="detail-key">Parts</span><span class="detail-val">${partsLines}</span></div>
+      <div class="detail-row"><span class="detail-key">Labour</span><span class="detail-val">${fmtCurrency(norm.labourCost)}</span></div>
+      <div class="detail-row"><span class="detail-key">Other</span><span class="detail-val">${fmtCurrency(norm.otherCost)}</span></div>
+    `;
+  }
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-row"><span class="detail-key">Date</span><span class="detail-val">${fmtDate(h.date)}</span></div>
+    <div class="detail-row"><span class="detail-key">Odometer</span><span class="detail-val">${fmt(h.odo)} km</span></div>
+    <div class="detail-row"><span class="detail-key">Cost</span><span class="detail-val">${fmtCurrency(h.cost)}</span></div>
+    <div class="detail-row"><span class="detail-key">Mechanic</span><span class="detail-val">${h.mechanic||'—'}</span></div>
+    <div class="detail-row"><span class="detail-key">Work Done</span><span class="detail-val">${h.work||'—'}</span></div>
+    ${breakdownHtml}
+    <div class="detail-row"><span class="detail-key">Notes</span><span class="detail-val">${h.notes||'—'}</span></div>
+  `;
+  openModal('modal-detail');
+}
+
+/* ── EXPENSES RENDERING ── */
+function renderExpenses() {
+  const hist = appData.history || [];
+  const total = hist.reduce((s,h)=>s+(Number(h.cost)||0),0);
+  const curYear = new Date().getFullYear();
+  const yearTotal = hist.filter(h=>new Date(h.date).getFullYear()===curYear).reduce((s,h)=>s+(Number(h.cost)||0),0);
+  const sorted = hist.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const last = sorted[0];
+
+  document.getElementById('exp-year').textContent = fmtCurrency(yearTotal);
+  document.getElementById('exp-total').textContent = fmtCurrency(total);
+  document.getElementById('exp-last').textContent = fmtCurrency(last?.cost);
+  document.getElementById('exp-avg').textContent = hist.length ? fmtCurrency(Math.round(total/hist.length)) : '₹0';
+
+  renderExpenseChart();
+  renderPartsList();
+  renderExpenseBreakdown();
+}
+
+function renderExpenseChart() {
+  const hist = appData.history || [];
+  const months = {};
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    months[key] = 0;
+  }
+  hist.forEach(h => {
+    if (!h.date) return;
+    const d = new Date(h.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if (key in months) months[key] += Number(h.cost)||0;
+  });
+
+  const vals = Object.values(months);
+  const keys = Object.keys(months);
+  const max = Math.max(...vals, 1);
+
+  const chart = document.getElementById('expense-chart');
+  const labels = document.getElementById('expense-chart-labels');
+  chart.innerHTML = '';
+  labels.innerHTML = '';
+
+  keys.forEach((k, i) => {
+    const v = vals[i];
+    const pct = (v / max) * 100;
+    const bar = document.createElement('div');
+    bar.style.cssText = `flex:1;background:linear-gradient(180deg,var(--accent),var(--accent2));border-radius:6px 6px 0 0;transition:height 0.8s cubic-bezier(0.4,0,0.2,1);height:0`;
+    bar.title = fmtCurrency(v);
+    chart.appendChild(bar);
+    setTimeout(() => { bar.style.height = pct + '%'; }, 50 + i*80);
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'flex:1;text-align:center;font-size:10px;color:var(--text3)';
+    const [y, m] = k.split('-');
+    lbl.textContent = new Date(Number(y), Number(m)-1).toLocaleString('default',{month:'short'});
+    labels.appendChild(lbl);
+  });
+}
+
+const LEGACY_PART_KEYWORDS = ['oil','filter','chain','brake','fork','tyre','spark','battery','belt','pad'];
+function detectLegacyPartNames(work) {
+  const w = (work || '').toLowerCase();
+  const found = new Set();
+  LEGACY_PART_KEYWORDS.forEach(k => { if (w.includes(k)) found.add(k.charAt(0).toUpperCase() + k.slice(1)); });
+  return found;
+}
+
+function renderPartsList() {
+  const hist = appData.history || [];
+  const pl = document.getElementById('parts-list');
+  const entries = [];
+  let specifiedTotal = 0;
+
+  hist.forEach(h => {
+    const norm = normalizeServiceRecord(h);
+    if (norm.parts.length) {
+      // Explicit part data has priority — never fall back to keyword
+      // detection or the record's total cost for these.
+      norm.parts.forEach(p => {
+        entries.push({ name: p.name, cost: p.cost, date: h.date, odo: h.odo, specified: true });
+        specifiedTotal += Number(p.cost) || 0;
+      });
+    } else if (h.work) {
+      // Legacy record with no individual part costs — show the part but
+      // never attribute the full service cost to it.
+      detectLegacyPartNames(h.work).forEach(name => {
+        entries.push({ name, cost: null, date: h.date, odo: h.odo, specified: false });
+      });
+    }
+  });
+
+  const totalEl = document.getElementById('parts-total-spending');
+  if (totalEl) totalEl.textContent = 'Total Parts Spending: ' + fmtCurrency(specifiedTotal);
+
+  if (!entries.length) { pl.innerHTML = '<li style="color:var(--text3);font-size:13px">No parts recorded yet</li>'; return; }
+
+  entries.sort((a, b) => new Date(b.date) - new Date(a.date));
+  pl.innerHTML = entries.map(e => `
+    <li>
+      <span>${escapeHtml(e.name)} replacement<br><span style="font-size:11px;color:var(--text3)">${fmtDate(e.date)} · ${fmt(e.odo||0)} km</span></span>
+      <span class="cost">${e.specified ? fmtCurrency(e.cost) : 'Cost not specified'}</span>
+    </li>
+  `).join('');
+}
+
+function renderExpenseBreakdown() {
+  const hist = (appData.history||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8);
+  const el = document.getElementById('expense-breakdown');
+  if (!hist.length) { el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">No records</div>'; return; }
+  el.innerHTML = hist.map(h=>`
+    <div class="detail-row">
+      <span class="detail-key" style="font-size:13px">${fmtDate(h.date)}<br><span style="font-size:11px;color:var(--text3)">${fmt(h.odo)} km</span></span>
+      <span class="detail-val" style="color:var(--accent)">${fmtCurrency(h.cost)}</span>
+    </div>
+  `).join('');
+}
+
+/* ── SETTINGS RENDERING ── */
+function renderSettings() {
+  document.getElementById('odo-setting').value = appData.odometer;
+  document.getElementById('dark-mode-toggle').checked = appData.darkMode !== false;
+}
+
+/* ── THEME ── */
+function applyTheme(dark) {
+  document.body.classList.toggle('light', !dark);
+  document.getElementById('dark-toggle').textContent = dark ? '☀️' : '🌙';
+  document.getElementById('dark-mode-toggle').checked = dark;
+  appData.darkMode = dark;
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#0a0f1e' : '#f0f4ff';
+  saveData();
+}
+
+/* ── ADD SERVICE RECORD / MARK AS SERVICED ──
+   Both flows share one modal and one save path (saveService →
+   createServiceRecord + applyMaintenanceActionsFromKeys), so there is a
+   single reliable place where service records and baseline resets happen. */
+let markServiceContext = null; // MAINT_ITEMS key when opened via "Mark as Serviced"
+
+function openAddModal() {
+  markServiceContext = null;
+  document.getElementById('modal-add-title').textContent = 'Add Service Record';
+  document.getElementById('save-service-btn').textContent = 'Save Service Record';
+  document.getElementById('service-context-note').style.display = 'none';
+  document.getElementById('form-date').value = today();
+  document.getElementById('form-odo').value = appData.odometer;
+  document.getElementById('form-cost').value = '';
+  document.getElementById('form-work').value = '';
+  document.getElementById('form-mechanic').value = '';
+  document.getElementById('form-notes').value = '';
+  document.getElementById('form-labour').value = '';
+  document.getElementById('form-other').value = '';
+  clearPartsRows();
+  updateBreakdown();
+  openModal('modal-add');
+}
+
+function openMarkServicedModal(key) {
+  const item = MAINT_ITEMS.find(i => i.key === key);
+  if (!item) return;
+  markServiceContext = key;
+  document.getElementById('modal-add-title').textContent = `Mark ${item.label} as Serviced`;
+  document.getElementById('save-service-btn').textContent = '✓ Mark as Serviced';
+  const note = document.getElementById('service-context-note');
+  note.style.display = 'block';
+  note.textContent = `This will reset the ${item.label} maintenance interval.`;
+  document.getElementById('form-date').value = today();
+  document.getElementById('form-odo').value = appData.odometer;
+  document.getElementById('form-cost').value = '';
+  document.getElementById('form-work').value = item.label;
+  document.getElementById('form-mechanic').value = '';
+  document.getElementById('form-notes').value = '';
+  document.getElementById('form-labour').value = '';
+  document.getElementById('form-other').value = '';
+  clearPartsRows();
+  updateBreakdown();
+  openModal('modal-add');
+}
+
+/* ── Parts & Individual Costs rows ──
+   Rows are appended/removed directly in the DOM (never a full re-render of
+   the list on every keystroke) so focus and the mobile keyboard are never
+   unexpectedly lost while entering multiple parts. */
+function createPartRowElement(name = '', cost = '') {
+  const row = document.createElement('div');
+  row.className = 'part-row';
+  row.innerHTML = `
+    <input type="text" class="form-input part-name-input" placeholder="Part name" value="${escapeHtml(name)}">
+    <input type="number" inputmode="decimal" class="form-input part-cost-input" placeholder="₹0" value="${cost === '' || cost == null ? '' : cost}">
+    <button type="button" class="part-remove-btn" aria-label="Remove part">✕</button>
+  `;
+  row.querySelector('.part-remove-btn').addEventListener('click', () => { row.remove(); updateBreakdown(); });
+  row.querySelector('.part-name-input').addEventListener('input', updateBreakdown);
+  row.querySelector('.part-cost-input').addEventListener('input', updateBreakdown);
+  return row;
+}
+function addPartRow(name = '', cost = '') {
+  document.getElementById('parts-rows').appendChild(createPartRowElement(name, cost));
+  updateBreakdown();
+}
+function clearPartsRows() {
+  document.getElementById('parts-rows').innerHTML = '';
+}
+function readPartsRowsRaw() {
+  return Array.from(document.querySelectorAll('#parts-rows .part-row')).map(row => ({
+    name: row.querySelector('.part-name-input').value.trim(),
+    costRaw: row.querySelector('.part-cost-input').value,
+  }));
+}
+function collectPartsRows() {
+  const parts = [];
+  for (const r of readPartsRowsRaw()) {
+    if (!r.name) continue; // ignore empty rows
+    if (r.costRaw === '') { parts.push({ name: r.name, cost: 0 }); continue; }
+    const cost = Number(r.costRaw);
+    if (isNaN(cost) || cost < 0) { showToast(`Invalid cost for "${r.name}"`, '⚠️'); return null; }
+    parts.push({ name: r.name, cost });
+  }
+  return parts;
+}
+
+function updateBreakdown() {
+  const partsTotal = readPartsRowsRaw().reduce((s, r) => {
+    const c = Number(r.costRaw);
+    return s + (r.name && !isNaN(c) ? c : 0);
+  }, 0);
+  const labour = Number(document.getElementById('form-labour').value) || 0;
+  const other = Number(document.getElementById('form-other').value) || 0;
+  const breakdownTotal = partsTotal + labour + other;
+  const serviceCost = Number(document.getElementById('form-cost').value) || 0;
+
+  document.getElementById('cb-parts').textContent = fmtCurrency(partsTotal);
+  document.getElementById('cb-labour').textContent = fmtCurrency(labour);
+  document.getElementById('cb-other').textContent = fmtCurrency(other);
+  document.getElementById('cb-breakdown-total').textContent = fmtCurrency(breakdownTotal);
+  document.getElementById('cb-service-total').textContent = fmtCurrency(serviceCost);
+
+  const warnEl = document.getElementById('cb-warning');
+  const hasBreakdownInput = partsTotal > 0 || labour > 0 || other > 0;
+  if (hasBreakdownInput && breakdownTotal !== serviceCost) {
+    const diff = serviceCost - breakdownTotal;
+    warnEl.style.display = 'block';
+    warnEl.textContent = `⚠ Cost breakdown does not match total service cost. Breakdown: ${fmtCurrency(breakdownTotal)} · Total: ${fmtCurrency(serviceCost)} · Unallocated: ${fmtCurrency(diff)}`;
+  } else {
+    warnEl.style.display = 'none';
+  }
+}
+
+function saveService() {
+  const date = document.getElementById('form-date').value;
+  const odo = Number(document.getElementById('form-odo').value);
+  const cost = Number(document.getElementById('form-cost').value) || 0;
+  const work = document.getElementById('form-work').value.trim();
+  const mechanic = document.getElementById('form-mechanic').value.trim();
+  const notes = document.getElementById('form-notes').value.trim();
+  const labourCost = Number(document.getElementById('form-labour').value) || 0;
+  const otherCost = Number(document.getElementById('form-other').value) || 0;
+
+  if (!date || !odo) { showToast('Please fill date and odometer', '⚠️'); return; }
+  if (odo < 0) { showToast('Odometer must be a valid non-negative number', '⚠️'); return; }
+  if (labourCost < 0 || otherCost < 0) { showToast('Charges cannot be negative', '⚠️'); return; }
+
+  const parts = collectPartsRows();
+  if (parts === null) return; // validation message already shown
+
+  // Detected actions come from the free-text "Work Done" field. If this
+  // came from "Mark as Serviced", the selected item is always included too
+  // — the user should never have to guess wording to reset it.
+  let maintenanceActions = Array.from(detectMaintenanceKeys(work));
+  if (markServiceContext && !maintenanceActions.includes(markServiceContext)) {
+    maintenanceActions = [...maintenanceActions, markServiceContext];
+  }
+
+  const record = createServiceRecord({ date, odo, cost, work, mechanic, notes, parts, labourCost, otherCost, maintenanceActions });
+  applyMaintenanceActionsFromKeys(maintenanceActions, odo, date);
+
+  saveData();
+  closeModal('modal-add');
+  const wasMarkServiced = !!markServiceContext;
+  markServiceContext = null;
+
+  showToast(wasMarkServiced ? 'Marked as serviced!' : 'Service record saved!', '✅');
+  renderHistory();
+  renderDashboard();
+  renderExpenses();
+}
+
+/* ── LOCAL EXPORT / IMPORT ── */
+function exportData() {
+  const json = JSON.stringify(appData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sp125-local-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Offline backup exported!', '💾');
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data && data.odometer !== undefined) {
+        appData = { ...DEFAULT_DATA, ...data };
+        migrateMaintenanceData();
+        saveData();
+        renderPage(currentPage);
+        showToast('Local data restored!', '✅');
+      } else throw new Error();
+    } catch { showToast('Invalid backup file', '❌'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ── DEVTOOLS & SECURITY PROTECTION ── */
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  if (
+    k === 'F12' ||
+    (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c','K','k'].includes(k)) ||
+    (e.ctrlKey && ['U','u'].includes(k)) ||
+    (e.metaKey && e.altKey && ['I','i','J','j','C','c'].includes(k))
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }
+});
+
+(function devToolsDetect() {
+  const THRESHOLD = 160;
+  let devOpen = false;
+  function check() {
+    const widthDiff  = window.outerWidth  - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+    const suspected  = widthDiff > THRESHOLD || heightDiff > THRESHOLD;
+    const before = performance.now();
+    // eslint-disable-next-line no-debugger
+    debugger;
+    const after = performance.now();
+    const debuggerOpen = (after - before) > 80;
+
+    if ((suspected || debuggerOpen) && !devOpen) {
+      devOpen = true;
+      document.getElementById('devtools-shield').classList.add('show');
+    } else if (!suspected && !debuggerOpen && devOpen) {
+      devOpen = false;
+      document.getElementById('devtools-shield').classList.remove('show');
+    }
+  }
+  setInterval(check, 1000);
+  window.addEventListener('resize', check);
+})();
+
+/* ── PWA / SERVICE WORKER ── */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+/* ════════════════════════════════════════════
+   INITIALIZATION
+═══════════════════════════════════════════ */
+async function initApp() {
+  loadData();
+  initNav();
+  applyTheme(appData.darkMode !== false);
+
+  // Initialize GitHub Sync Module state
+  await ghSync.init();
+
+  // Check stored active session
+  const activeSession = loadAppSession();
+  if (activeSession) {
+    enterApp(activeSession);
+  } else {
+    await checkStoredCredentialsUI();
+  }
+
+  // Loader hide
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('hidden');
+  }, 1600);
+
+  // Initial render
+  renderDashboard();
+  renderChecklist();
+
+  /* ── EVENT LISTENERS ── */
+  document.getElementById('dark-toggle').addEventListener('click', () => {
+    applyTheme(!appData.darkMode);
+    showToast(appData.darkMode ? 'Dark mode on' : 'Light mode on', appData.darkMode ? '🌙' : '☀️');
+  });
+
+  document.getElementById('dark-mode-toggle').addEventListener('change', e => applyTheme(e.target.checked));
+
+  document.getElementById('notif-btn').addEventListener('click', () => {
+    const alerts = getAlerts();
+    const total = alerts.urgent.length + alerts.warn.length;
+    showToast(total ? `${total} maintenance alert${total>1?'s':''}` : 'All systems good! ✅', total ? '🔔' : '✅');
+  });
+
+  document.getElementById('edit-odo-btn').addEventListener('click', () => {
+    document.getElementById('modal-odo-input').value = appData.odometer;
+    openModal('modal-odo');
+  });
+
+  document.getElementById('save-odo-modal-btn').addEventListener('click', () => {
+    const val = Number(document.getElementById('modal-odo-input').value);
+    if (!val || val < 0) { showToast('Enter valid odometer reading', '⚠️'); return; }
+    appData.odometer = val;
+    saveData();
+    closeModal('modal-odo');
+    renderDashboard();
+    showToast(`Odometer updated to ${fmt(val)} km`, '🛣️');
+  });
+  document.getElementById('cancel-odo-btn').addEventListener('click', () => closeModal('modal-odo'));
+
+  document.getElementById('fab-add').addEventListener('click', openAddModal);
+  document.getElementById('save-service-btn').addEventListener('click', saveService);
+  document.getElementById('cancel-add-btn').addEventListener('click', () => { markServiceContext = null; closeModal('modal-add'); });
+  document.getElementById('close-detail-btn').addEventListener('click', () => closeModal('modal-detail'));
+
+  document.getElementById('add-part-btn').addEventListener('click', () => addPartRow());
+  document.getElementById('form-cost').addEventListener('input', updateBreakdown);
+  document.getElementById('form-labour').addEventListener('input', updateBreakdown);
+  document.getElementById('form-other').addEventListener('input', updateBreakdown);
+
+  document.getElementById('history-search').addEventListener('input', e => renderHistory(e.target.value));
+  document.getElementById('clear-search').addEventListener('click', () => {
+    document.getElementById('history-search').value = '';
+    renderHistory();
+  });
+
+  document.getElementById('reset-checklist').addEventListener('click', () => {
+    if (!confirm('Reset all checklist items?')) return;
+    appData.checklist = {};
+    saveData();
+    renderChecklist();
+    showToast('Checklist reset', '🔄');
+  });
+
+  document.getElementById('save-odo-btn').addEventListener('click', () => {
+    const val = Number(document.getElementById('odo-setting').value);
+    if (!val || val < 0) { showToast('Enter valid odometer', '⚠️'); return; }
+    appData.odometer = val;
+    saveData();
+    showToast(`Saved: ${fmt(val)} km`, '✅');
+    renderDashboard();
+  });
+
+  document.getElementById('export-btn').addEventListener('click', exportData);
+  document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+  document.getElementById('import-file').addEventListener('change', e => {
+    if (e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  document.getElementById('reset-all-btn').addEventListener('click', () => {
+    if (!confirm('⚠️ Permanently delete all local data?')) return;
+    if (!confirm('Really reset everything?')) return;
+    resetData();
+    renderPage(currentPage);
+    showToast('All local data reset', '🔄');
+  });
+
+  document.getElementById('install-btn').addEventListener('click', () => {
+    if (deferredInstall) {
+      deferredInstall.prompt();
+      deferredInstall.userChoice.then(() => {
+        deferredInstall = null;
+        document.getElementById('install-banner').classList.remove('show');
+      });
+    }
+  });
+
+  // Modal backdrop click close
+  ['modal-add','modal-detail','modal-odo','gh-choice-dialog','gh-new-gist-modal','gh-manage-modal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('click', e => {
+        if (e.target.id === id) closeModal(id);
+      });
+    }
+  });
+
+  // Auth Button actions
+  document.getElementById('login-btn').addEventListener('click', doGitHubLogin);
+  document.getElementById('login-unlock-btn').addEventListener('click', doUnlockLogin);
+  document.getElementById('signup-btn').addEventListener('click', doGitHubSignup);
+  document.getElementById('logout-btn').addEventListener('click', doLogout);
+
+  document.getElementById('signup-create-gist-btn').addEventListener('click', async () => {
+    const token = (document.getElementById('signup-token').value || '').trim();
+    if (!token) { showToast('Enter GitHub token first', '⚠️'); return; }
+    try {
+      const gid = await ghSync.createNewGist(token);
+      document.getElementById('signup-gist-id').value = gid;
+      showOneTimeGistDialog(gid);
+    } catch (e) {
+      showToast('Gist Creation Error: ' + e.message, '❌');
+    }
+  });
+
+  // Cloud Sync buttons
+  document.getElementById('gh-upload-btn').addEventListener('click', handleCloudUpload);
+  document.getElementById('gh-download-btn').addEventListener('click', handleCloudDownload);
+  document.getElementById('gh-profile-btn').addEventListener('click', openManageModal);
+
+  // Manage Modal actions
+  document.getElementById('gh-reconnect-btn').addEventListener('click', async () => {
+    closeModal('gh-manage-modal');
+    handleBadgeClick();
+  });
+  document.getElementById('gh-disconnect-btn').addEventListener('click', () => {
+    ghSync.disconnect();
+    closeModal('gh-manage-modal');
+    showToast('Session disconnected. RAM wiped.', '🔒');
+  });
+  document.getElementById('gh-purge-cred-btn').addEventListener('click', async () => {
+    if (!confirm('This will wipe your encrypted credentials from this device. Are you sure?')) return;
+    await ghSync.purgeCredentials();
+    closeModal('gh-manage-modal');
+    showToast('Stored credentials removed from device.', '🗑');
+    checkStoredCredentialsUI();
+  });
+  document.getElementById('gh-close-manage-btn').addEventListener('click', () => closeModal('gh-manage-modal'));
+}
+
+window.addEventListener('DOMContentLoaded', initApp);
+</script>
+</body>
+</html>
